@@ -1,0 +1,7 @@
+chart:
+  version: "0.19.2"
+namespace: external-secrets
+repoURL: https://charts.external-secrets.io
+syncPolicy:
+  prune: true
+  selfHeal: true
