@@ -101,6 +101,12 @@ Argo CD uses its bundled Dex server for GitHub OAuth. The public URL is
 `https://argocd.huukiet.com`, and the OAuth credentials are read from Vault through
 External Secrets. The credentials are never stored in Git.
 
+Public TLS terminates upstream of Argo CD. The bundled Dex issuer is reached through
+an internal Cloudflare/Ingress route whose origin certificate is not in the
+`argocd-server` trust store, so OIDC provider certificate verification is disabled in
+`argocd-cm`. Remove this exception after the internal route presents a certificate
+issued by a CA trusted by the Argo CD container.
+
 Create an OAuth App under GitHub **Settings > Developer settings > OAuth Apps** with:
 
 ```text

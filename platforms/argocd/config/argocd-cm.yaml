@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   url: https://argocd.huukiet.com
+  # The bundled Dex issuer is reached through the internal Cloudflare/Ingress
+  # route, whose origin certificate is not in the argocd-server trust store.
+  oidc.tls.insecure.skip.verify: "true"
   dex.config: |
     connectors:
       - type: github
