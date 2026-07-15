@@ -18,7 +18,9 @@ INIT_TEMP_FILE=""
 cleanup() {
   unset ROOT_TOKEN TUNNEL_TOKEN UNSEAL_KEY
   if [[ -n "$INIT_TEMP_FILE" && -f "$INIT_TEMP_FILE" ]]; then
-    rm -f -- "$INIT_TEMP_FILE"
+    chmod 600 -- "$INIT_TEMP_FILE" || true
+    printf 'WARNING: Vault initialization output was preserved at %s\n' \
+      "$INIT_TEMP_FILE" >&2
   fi
 }
 
@@ -110,18 +112,20 @@ if [[ "$initialized" == "false" ]]; then
       -key-threshold="$INIT_KEY_THRESHOLD" \
       -format=json >"$INIT_TEMP_FILE"
 
+  # Preserve the initialization response before validating it. Vault cannot
+  # reproduce unseal keys after a successful initialization.
+  mv -- "$INIT_TEMP_FILE" "$init_output"
+  INIT_TEMP_FILE=""
+  chmod 600 -- "$init_output"
+
   jq -e \
     --argjson shares "$INIT_KEY_SHARES" \
     --argjson threshold "$INIT_KEY_THRESHOLD" \
     '(.unseal_keys_b64 | length) == $shares and
-     .secret_threshold == $threshold and
+     .unseal_threshold == $threshold and
      (.root_token | length) > 0' \
-    "$INIT_TEMP_FILE" >/dev/null \
-    || fail "Vault initialization output is incomplete"
-
-  mv -- "$INIT_TEMP_FILE" "$init_output"
-  INIT_TEMP_FILE=""
-  chmod 600 -- "$init_output"
+    "$init_output" >/dev/null \
+    || fail "Vault was initialized, but its recovery output is unexpected. The raw output was preserved at $init_output"
 
   mapfile -t unseal_keys < <(
     jq -r --argjson threshold "$INIT_KEY_THRESHOLD" \
