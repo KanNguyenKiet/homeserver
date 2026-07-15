@@ -221,6 +221,10 @@ kubectl wait secretstore/vault-backend -n cloudflared \
   --for=condition=Ready --timeout="$WAIT_TIMEOUT"
 kubectl wait externalsecret/cloudflared-token -n cloudflared \
   --for=condition=Ready --timeout="$WAIT_TIMEOUT"
+kubectl patch externalsecret cloudflared-token -n cloudflared \
+  --type=merge \
+  --patch '{"metadata":{"annotations":{"external-secrets.io/force-sync":null,"force-sync":null}}}' \
+  >/dev/null
 kubectl rollout status deployment/cloudflared -n cloudflared --timeout="$WAIT_TIMEOUT"
 
 log "Vault and the Cloudflare tunnel secret are ready"
