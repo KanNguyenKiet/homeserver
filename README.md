@@ -34,19 +34,20 @@ After cloning the repository on the home server, deploy the current `master` bra
 with:
 
 ```bash
+git pull --ff-only origin master
 bash deploy.sh
 ```
 
 The script requires `git`, `helm`, and `kubectl`. It refuses to run with local changes,
-pulls `origin/master` using fast-forward only, builds and validates every Helm chart,
-updates Argo CD, applies the root Application, and waits for all child Applications to
-sync to the pulled Git commit.
+deploys the currently checked-out local `master` commit, builds and validates every
+Helm chart, updates Argo CD, applies the root Application, and waits for all child
+Applications to sync to that commit. Pull changes manually before running the script.
 
-The remote and timeout can be overridden when necessary. Deployment always uses the
-`master` branch because the Argo CD Applications track that branch:
+The timeout can be overridden when necessary. Deployment always uses the `master`
+branch because the Argo CD Applications track that branch:
 
 ```bash
-GIT_REMOTE=origin DEPLOY_TIMEOUT_SECONDS=900 bash deploy.sh
+DEPLOY_TIMEOUT_SECONDS=900 bash deploy.sh
 ```
 
 After this step, there is no need to run `helm install` or `kubectl apply` for each

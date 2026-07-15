@@ -3,7 +3,6 @@
 set -Eeuo pipefail
 
 readonly REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly GIT_REMOTE="${GIT_REMOTE:-origin}"
 readonly GIT_BRANCH="master"
 readonly DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT_SECONDS:-600}"
 readonly KUBECTL_TIMEOUT="${DEPLOY_TIMEOUT_SECONDS}s"
@@ -96,9 +95,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
   fail "Working tree is not clean; commit or discard local changes before deploying"
 fi
 
-log "Pulling $GIT_REMOTE/$GIT_BRANCH"
-git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH"
 readonly EXPECTED_REVISION="$(git rev-parse HEAD)"
+
+log "Deploying commit $EXPECTED_REVISION from local $GIT_BRANCH"
 
 log "Updating Helm dependencies"
 helm dependency update platforms/external-secrets
