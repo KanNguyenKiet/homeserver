@@ -95,6 +95,51 @@ directly from Git. Each application's configuration is stored in its correspondi
 > the address configured in `apps/gitea/values.yaml`. These dependencies are not yet
 > defined in this repository.
 
+## Argo CD GitHub login
+
+Argo CD uses its bundled Dex server for GitHub OAuth. The public URL is
+`https://argocd.huukiet.com`, and the OAuth credentials are read from Vault through
+External Secrets. The credentials are never stored in Git.
+
+Create an OAuth App under GitHub **Settings > Developer settings > OAuth Apps** with:
+
+```text
+Application name: Argo CD
+Homepage URL: https://argocd.huukiet.com
+Authorization callback URL: https://argocd.huukiet.com/api/dex/callback
+```
+
+Deploy the Git revision containing the Argo CD configuration, then write the OAuth
+client ID and client secret to Vault:
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+bash scripts/configure-argocd-github-oauth.sh
+```
+
+The script securely prompts for the Vault root token and both OAuth values. It creates
+a Vault policy and Kubernetes auth role restricted to the
+`argocd/argocd-vault-auth` ServiceAccount, writes the credentials to
+`kv/homeserver/argocd`, waits for External Secrets, and restarts the Argo CD server
+and Dex.
+
+Open `https://argocd.huukiet.com` and choose **Log in via GitHub**. RBAC grants
+`role:admin` only to the stable GitHub user ID `20751267` (`KanNguyenKiet`). Other
+GitHub identities receive the empty default role and cannot access Argo CD resources.
+The built-in local `admin` account remains enabled as a recovery path; disable it only
+after GitHub login has been verified.
+
+Verify the secret integration and Dex rollout with:
+
+```bash
+kubectl -n argocd get secretstore vault-backend
+kubectl -n argocd get externalsecret argocd-github-oauth
+kubectl -n argocd rollout status deployment/argocd-dex-server
+kubectl -n argocd rollout status deployment/argocd-server
+kubectl -n argocd logs deployment/argocd-dex-server --tail=100
+```
+
 ## HashiCorp Vault
 
 Vault runs as one Raft member with a retained 10 GiB persistent volume. This matches the
