@@ -9,21 +9,27 @@ readonly KUBECTL_TIMEOUT="${DEPLOY_TIMEOUT_SECONDS}s"
 
 readonly CHARTS=(
   "platforms/external-secrets"
+  "platforms/vault"
   "platforms/nginx-ingress"
+  "platforms/cloudflared"
   "apps/gitea"
   "apps/homepage"
 )
 
 readonly RELEASES=(
   "external-secrets"
+  "vault"
   "ingress-nginx"
+  "cloudflared"
   "gitea"
   "homepage"
 )
 
 readonly NAMESPACES=(
   "external-secrets"
+  "vault"
   "ingress-nginx"
+  "cloudflared"
   "gitea"
   "homepage"
 )
@@ -101,6 +107,7 @@ log "Deploying commit $EXPECTED_REVISION from local $GIT_BRANCH"
 
 log "Updating Helm dependencies"
 helm dependency update platforms/external-secrets
+helm dependency update platforms/vault
 helm dependency update platforms/nginx-ingress
 
 log "Linting and rendering Helm charts"
@@ -146,7 +153,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets nginx-ingress gitea homepage; do
+for application in argocd-config external-secrets vault nginx-ingress cloudflared gitea homepage; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

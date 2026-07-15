@@ -1,0 +1,76 @@
+replicaCount: 2
+
+image:
+  repository: cloudflare/cloudflared
+  tag: "2026.7.1"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+tunnelToken:
+  existingSecret: cloudflared-token
+  key: token
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    mountPath: kubernetes
+    role: cloudflared
+    serviceAccountName: cloudflared-vault-auth
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/cloudflared
+    property: token
+
+logLevel: info
+
+metrics:
+  address: 0.0.0.0
+  port: 2000
+
+podAnnotations: {}
+
+podSecurityContext:
+  sysctls:
+    - name: net.ipv4.ping_group_range
+      value: "65532 65532"
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+probes:
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

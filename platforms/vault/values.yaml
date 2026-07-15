@@ -1,0 +1,85 @@
+vault:
+  global:
+    enabled: true
+    # Vault is only exposed as a ClusterIP. Use kubectl port-forward for the UI.
+    tlsDisable: true
+
+  injector:
+    enabled: false
+
+  csi:
+    enabled: false
+
+  server:
+    enabled: true
+
+    image:
+      repository: hashicorp/vault
+      tag: "2.0.3"
+      pullPolicy: IfNotPresent
+
+    serviceAccount:
+      create: true
+      name: vault
+      createSecret: false
+      serviceDiscovery:
+        enabled: true
+
+    # Lets Vault validate short-lived Kubernetes ServiceAccount tokens.
+    authDelegator:
+      enabled: true
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    dataStorage:
+      enabled: true
+      size: 10Gi
+      storageClass: null
+      accessMode: ReadWriteOnce
+
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+
+    auditStorage:
+      enabled: false
+
+    standalone:
+      enabled: false
+
+    ha:
+      enabled: true
+      # One Raft member matches the current single-node home server. Increase to
+      # three only after the Kubernetes cluster has three failure domains.
+      replicas: 1
+      clusterAddr: "http://$(HOSTNAME).vault-internal:8201"
+      disruptionBudget:
+        enabled: false
+      raft:
+        enabled: true
+        setNodeId: true
+        config: |
+          ui = true
+
+          listener "tcp" {
+            tls_disable = 1
+            address = "[::]:8200"
+            cluster_address = "[::]:8201"
+          }
+
+          storage "raft" {
+            path = "/vault/data"
+          }
+
+          service_registration "kubernetes" {}
+
+  ui:
+    enabled: true
+    activeVaultPodOnly: true
+    serviceType: ClusterIP

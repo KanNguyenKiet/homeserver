@@ -3,7 +3,9 @@ kind: Kustomization
 resources:
   - root-application.yaml
   - platforms/external-secrets/application.yaml
+  - platforms/vault/application.yaml
   - platforms/nginx-ingress/application.yaml
+  - platforms/cloudflared/application.yaml
   - platforms/argocd/config/application.yaml
   - apps/gitea/application.yaml
   - apps/homepage/application.yaml
