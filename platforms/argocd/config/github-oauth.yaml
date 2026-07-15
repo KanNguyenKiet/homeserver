@@ -35,7 +35,10 @@ spec:
   target:
     name: argocd-github-oauth
     creationPolicy: Owner
+    deletionPolicy: Retain
     template:
+      engineVersion: v2
+      mergePolicy: Replace
       metadata:
         labels:
           app.kubernetes.io/part-of: argocd
@@ -44,7 +47,13 @@ spec:
       remoteRef:
         key: homeserver/argocd
         property: githubClientID
+        conversionStrategy: Default
+        decodingStrategy: None
+        metadataPolicy: None
     - secretKey: clientSecret
       remoteRef:
         key: homeserver/argocd
         property: githubClientSecret
+        conversionStrategy: Default
+        decodingStrategy: None
+        metadataPolicy: None
