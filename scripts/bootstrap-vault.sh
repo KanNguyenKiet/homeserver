@@ -134,9 +134,9 @@ if [[ "$initialized" == "false" ]]; then
 
   log "Unsealing Vault"
   for UNSEAL_KEY in "${unseal_keys[@]}"; do
-    printf '%s\n' "$UNSEAL_KEY" | \
+    printf '%s' "$UNSEAL_KEY" | \
       kubectl exec -i -n "$VAULT_NAMESPACE" "$VAULT_POD" -- \
-        env VAULT_ADDR="$VAULT_ADDR" vault operator unseal >/dev/null
+        env VAULT_ADDR="$VAULT_ADDR" vault write sys/unseal key=- >/dev/null
   done
   unset UNSEAL_KEY unseal_keys
 

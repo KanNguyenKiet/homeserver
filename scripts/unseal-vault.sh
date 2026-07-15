@@ -61,9 +61,9 @@ for ((index = 1; index <= threshold; index++)); do
   printf '\n'
   [[ -n "$UNSEAL_KEY" ]] || fail "Unseal key cannot be empty"
 
-  printf '%s\n' "$UNSEAL_KEY" | \
+  printf '%s' "$UNSEAL_KEY" | \
     kubectl exec -i -n "$VAULT_NAMESPACE" "$VAULT_POD" -- \
-      env VAULT_ADDR="$VAULT_ADDR" vault operator unseal >/dev/null
+      env VAULT_ADDR="$VAULT_ADDR" vault write sys/unseal key=- >/dev/null
   unset UNSEAL_KEY
 
   status="$(vault_status)"
