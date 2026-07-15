@@ -28,6 +28,27 @@ kubectl wait --for=condition=Available deployment/argocd-server \
 kubectl apply -f root-application.yaml
 ```
 
+## Server deployment script
+
+After cloning the repository on the home server, deploy the current `master` branch
+with:
+
+```bash
+bash deploy.sh
+```
+
+The script requires `git`, `helm`, and `kubectl`. It refuses to run with local changes,
+pulls `origin/master` using fast-forward only, builds and validates every Helm chart,
+updates Argo CD, applies the root Application, and waits for all child Applications to
+sync to the pulled Git commit.
+
+The remote and timeout can be overridden when necessary. Deployment always uses the
+`master` branch because the Argo CD Applications track that branch:
+
+```bash
+GIT_REMOTE=origin DEPLOY_TIMEOUT_SECONDS=900 bash deploy.sh
+```
+
 After this step, there is no need to run `helm install` or `kubectl apply` for each
 application. Make changes through Git commits; Argo CD handles synchronization,
 pruning, and self-healing.
@@ -50,7 +71,7 @@ in its corresponding `values.yaml` file.
 
 - To change a platform dependency version, update the dependency in `Chart.yaml`.
   Before linting or rendering locally, run
-  `helm dependency build platforms/<platform>`.
+  `helm dependency update platforms/<platform>`.
 - To change platform configuration, edit `platforms/<platform>/values.yaml`.
 - To change Gitea or Homepage configuration, edit `apps/<app>/values.yaml`.
 - To validate a local application chart, run `helm lint apps/<app>` and
