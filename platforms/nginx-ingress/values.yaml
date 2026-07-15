@@ -1,0 +1,25 @@
+ingress-nginx:
+  controller:
+    replicaCount: 1
+
+    ingressClass: nginx
+    ingressClassResource:
+      name: nginx
+      enabled: true
+      default: false
+
+    service:
+      type: NodePort
+
+    admissionWebhooks:
+      enabled: true
+      patch:
+        enabled: true
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 90Mi
+
+  defaultBackend:
+    enabled: false

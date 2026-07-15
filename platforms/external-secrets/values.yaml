@@ -1,7 +1,22 @@
-chart:
-  version: "0.19.2"
-namespace: external-secrets
-repoURL: https://charts.external-secrets.io
-syncPolicy:
-  prune: true
-  selfHeal: true
+external-secrets:
+  installCRDs: true
+
+  replicaCount: 1
+
+  webhook:
+    create: true
+    replicaCount: 1
+
+  certController:
+    create: true
+    replicaCount: 1
+
+  leaderElect: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: homepage
+description: Homepage dashboard for the homeserver cluster
+type: application
+version: 0.1.0
+appVersion: "latest"

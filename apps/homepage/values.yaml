@@ -1,0 +1,135 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/gethomepage/homepage
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: home.huukiet.com
+  path: /
+  pathType: Prefix
+  tls: []
+
+allowedHosts:
+  - home.huukiet.com
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+probes:
+  liveness:
+    initialDelaySeconds: 5
+    periodSeconds: 15
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 15
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+config:
+  kubernetesYaml: |
+    mode: cluster
+  bookmarksYaml: |
+    - Developer:
+        - GitHub:
+            - abbr: GH
+              href: https://github.com/
+  settingsYaml: |
+    title: Kiet Home
+    description: Homelab Control Center
+    theme: dark
+    color: slate
+    background:
+      image: https://images.unsplash.com/photo-1502790671504-542ad42d5189?auto=format&fit=crop&w=2560&q=80
+      blur: sm
+      saturate: 50
+      brightness: 50
+      opacity: 70
+    cardBlur: xs
+    headerStyle: boxed
+    statusStyle: dot
+    target: _blank
+  servicesYaml: |
+    - Infrastructure:
+        - Server:
+            href: https://home.huukiet.com
+            description: Ubuntu Kubernetes server
+  widgetsYaml: |
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: cluster
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+    - resources:
+        backend: resources
+        expanded: true
+        cpu: true
+        memory: true
+        network: default
+    - search:
+        provider: duckduckgo
+        target: _blank
+  customCss: |
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    #page_container {
+      backdrop-filter: none;
+    }
+
+    .service-card,
+    .bookmark-card {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.54) !important;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+    }
+
+    .service-card:hover,
+    .bookmark-card:hover {
+      transform: translateY(-2px);
+      transition: transform 160ms ease, border-color 160ms ease;
+      border-color: rgba(125, 211, 252, 0.55);
+    }
+  customJs: ""
+  dockerYaml: ""
+  proxmoxYaml: ""

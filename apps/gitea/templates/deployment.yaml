@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gitea.fullname" . }}
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "gitea.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: gitea
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.http.targetPort }}
+              protocol: TCP
+            - name: ssh
+              containerPort: {{ .Values.service.ssh.targetPort }}
+              protocol: TCP
+          env:
+            - name: GITEA__database__DB_TYPE
+              value: {{ .Values.gitea.database.type | quote }}
+            - name: GITEA__database__HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "gitea.fullname" . }}-config
+                  key: DB_HOST
+            - name: GITEA__database__NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gitea.database.existingSecret }}
+                  key: {{ .Values.gitea.database.secretKeys.name }}
+            - name: GITEA__database__USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gitea.database.existingSecret }}
+                  key: {{ .Values.gitea.database.secretKeys.user }}
+            - name: GITEA__database__PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gitea.database.existingSecret }}
+                  key: {{ .Values.gitea.database.secretKeys.password }}
+            - name: GITEA__server__ROOT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "gitea.fullname" . }}-config
+                  key: ROOT_URL
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "gitea.dataClaimName" . }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

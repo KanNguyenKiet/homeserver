@@ -1,6 +1,10 @@
 apiVersion: v2
-name: external-secrets-bootstrap
-description: Bootstrap External Secrets Operator via ArgoCD
+name: external-secrets-platform
+description: External Secrets platform chart for the homeserver cluster
 type: application
 version: 0.1.0
 appVersion: "0.19.2"
+dependencies:
+  - name: external-secrets
+    version: "0.19.2"
+    repository: https://charts.external-secrets.io

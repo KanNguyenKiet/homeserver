@@ -1,0 +1,55 @@
+replicaCount: 1
+
+image:
+  repository: docker.gitea.com/gitea
+  tag: "1.24.7"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  http:
+    port: 3000
+    targetPort: 3000
+  ssh:
+    port: 22
+    targetPort: 22
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: git.huukiet.com
+  path: /
+  pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  storageClass: ""
+
+gitea:
+  rootUrl: https://git.huukiet.com
+  database:
+    type: postgres
+    host: postgres.default.svc.cluster.local:5432
+    existingSecret: gitea-secret
+    secretKeys:
+      name: DB_NAME
+      user: DB_USER
+      password: DB_PASS
+
+podSecurityContext:
+  fsGroup: 1000
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
