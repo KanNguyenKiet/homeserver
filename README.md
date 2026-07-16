@@ -15,6 +15,7 @@ homeserver/
 |   |-- cloudflared/                 # Cloudflare Tunnel connector Helm chart
 |   |-- external-secrets/            # External Secrets wrapper Helm chart
 |   |-- nginx-ingress/               # ingress-nginx wrapper Helm chart
+|   |-- tailscale/                   # Tailscale Operator and subnet connector
 |   `-- vault/                       # HashiCorp Vault wrapper Helm chart
 |-- scripts/                         # Vault bootstrap and unseal operations
 |-- kustomization.yaml               # Root and child Application resources
@@ -66,10 +67,11 @@ that Application. Carefully review this type of change before merging it.
 
 ## Helm charts
 
-External Secrets, HashiCorp Vault, and ingress-nginx are local wrapper Helm charts in
-`platforms/`. Each chart keeps its `application.yaml` beside `Chart.yaml`. The upstream
-chart is declared as a dependency in `Chart.yaml` and downloaded during the dependency
-build. Generated `Chart.lock` and `charts/*.tgz` files are ignored and are not committed.
+External Secrets, HashiCorp Vault, ingress-nginx, and the Tailscale Operator are local
+wrapper Helm charts in `platforms/`. Each chart keeps its `application.yaml` beside
+`Chart.yaml`. The upstream chart is declared as a dependency in `Chart.yaml` and
+downloaded during the dependency build. Generated `Chart.lock` and `charts/*.tgz` files
+are ignored and are not committed.
 
 Cloudflared, Gitea, and Homepage are local Helm charts. Argo CD renders these charts
 directly from Git. Each application's configuration is stored in its corresponding
@@ -82,6 +84,8 @@ directly from Git. Each application's configuration is stored in its correspondi
 - To change Gitea or Homepage configuration, edit `apps/<app>/values.yaml`.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
+- To change Tailscale routes, tags, or connector settings, edit
+  `platforms/tailscale/values.yaml`.
 - To validate a local application chart, run `helm lint apps/<app>` and
   `helm template <app> apps/<app> --namespace <app>`.
 - To add a chart, place `application.yaml` beside `Chart.yaml`, then add that
@@ -92,8 +96,85 @@ directly from Git. Each application's configuration is stored in its correspondi
 > the repository is made private.
 
 > Gitea still requires the `gitea/gitea-secret` Secret and a PostgreSQL instance at
-> the address configured in `apps/gitea/values.yaml`. These dependencies are not yet
-> defined in this repository.
+> the address configured in `apps/gitea/values.yaml`. The Secret is managed through
+> Vault and External Secrets, while PostgreSQL runs natively on the homeserver.
+
+## Native PostgreSQL for apps
+
+PostgreSQL is intentionally not deployed through Kubernetes in this setup. Install it
+directly on the homeserver, reserve a stable LAN IP or local DNS name for that host,
+and let Kubernetes workloads connect to that address.
+
+Install PostgreSQL 16 on Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install -y postgresql-common
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+sudo apt update
+sudo apt install -y postgresql-16 postgresql-client-16
+sudo systemctl enable --now postgresql
+sudo pg_lsclusters
+```
+
+Find the server LAN address and Kubernetes Pod CIDR:
+
+```bash
+ip -br addr
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.podCIDR}{"\n"}{end}'
+```
+
+Edit `/etc/postgresql/16/main/postgresql.conf` so PostgreSQL listens on localhost
+and the server LAN IP:
+
+```conf
+listen_addresses = 'localhost,192.168.1.10'
+port = 5432
+password_encryption = 'scram-sha-256'
+```
+
+Edit `/etc/postgresql/16/main/pg_hba.conf` and allow only the app database/user from
+the Kubernetes Pod CIDR. Replace the CIDR with the value from the node command above:
+
+```conf
+host  gitea  gitea  10.42.0.0/16  scram-sha-256
+```
+
+Restart PostgreSQL and confirm it is listening:
+
+```bash
+sudo systemctl restart postgresql
+sudo systemctl status postgresql --no-pager
+sudo ss -lntp | grep 5432
+```
+
+If UFW is already enabled, allow only Pod traffic to PostgreSQL:
+
+```bash
+sudo ufw allow from 10.42.0.0/16 to 192.168.1.10 port 5432 proto tcp
+```
+
+Update `apps/gitea/values.yaml` if the PostgreSQL host is not
+`192.168.1.10:5432`, deploy the Git revision, then create the Gitea database and
+Vault secret:
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+bash scripts/configure-gitea-postgresql.sh
+```
+
+Verify Gitea can connect from inside Kubernetes:
+
+```bash
+kubectl -n gitea run pg-test --rm -it --restart=Never --image=postgres:16 -- \
+  psql -h 192.168.1.10 -U gitea -d gitea -W -c 'select 1;'
+kubectl -n gitea rollout status deployment/gitea
+```
+
+Back up PostgreSQL outside Kubernetes. A simple starting point is a nightly
+`pg_dump -Fc` for each application database plus `pg_dumpall --globals-only`, stored
+off the server or on a separate encrypted disk.
 
 ## Argo CD GitHub login
 
@@ -252,3 +333,96 @@ separately:
 sudo apt-get remove --purge -y cloudflared
 sudo apt-get autoremove -y
 ```
+
+## Tailscale Kubernetes Operator
+
+Tailscale runs in Kubernetes through the official Operator. A single `Connector`
+named `homeserver` acts as a subnet router and advertises these networks to the
+tailnet:
+
+```text
+192.168.1.0/24  homeserver LAN
+10.42.0.0/16    default k3s Pod CIDR
+10.43.0.0/16    default k3s Service CIDR
+```
+
+Confirm the LAN, Pod, and Service CIDRs before deploying. If this cluster was created
+with custom ranges, update `connector.subnetRouter.advertiseRoutes` in
+`platforms/tailscale/values.yaml`. Avoid using a LAN range that commonly overlaps the
+network from which remote clients connect.
+
+In the Tailscale policy file, merge these tag ownership and route approval entries
+with the existing policy:
+
+```json
+{
+  "tagOwners": {
+    "tag:k8s-operator": [],
+    "tag:k8s": ["tag:k8s-operator"]
+  },
+  "autoApprovers": {
+    "routes": {
+      "192.168.1.0/24": ["tag:k8s"],
+      "10.42.0.0/16": ["tag:k8s"],
+      "10.43.0.0/16": ["tag:k8s"]
+    }
+  }
+}
+```
+
+Create an OAuth client in the Tailscale admin console under **Trust credentials**.
+Grant write access for **Devices Core**, **Auth Keys**, and **Services**, and assign
+the client the `tag:k8s-operator` tag. Save its client ID and secret temporarily; the
+secret is shown only once.
+
+Deploy the Git revision first. The Operator Pod initially waiting for the
+`operator-oauth` Secret is expected. Then store the OAuth credentials in Vault and
+wait for the Operator and Connector:
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+bash scripts/configure-tailscale-oauth.sh
+```
+
+The script creates a Vault policy and Kubernetes auth role restricted to the
+`tailscale/tailscale-vault-auth` ServiceAccount. External Secrets reads
+`kv/homeserver/tailscale`, creates `tailscale/operator-oauth`, and refreshes it hourly.
+No Tailscale OAuth credential is stored in Git.
+
+Verify the deployment and advertised routes:
+
+```bash
+kubectl -n tailscale get secretstore,externalsecret
+kubectl -n tailscale rollout status deployment/operator
+kubectl get connector homeserver
+kubectl -n tailscale get pods
+```
+
+If route auto-approval was not configured, approve the three routes for the
+`homeserver-k8s` machine in the Tailscale admin console. Linux clients must also accept
+subnet routes:
+
+```bash
+sudo tailscale set --accept-routes=true
+```
+
+From a remote tailnet device, test SSH to the homeserver LAN address and any required
+cluster address before removing the host daemon:
+
+```bash
+ssh <user>@192.168.1.10
+```
+
+After the Connector has remained healthy and remote access works, disable the old host
+daemon. Keep the package and state directory until the Kubernetes migration has been
+verified over several reconnects or a server reboot:
+
+```bash
+sudo systemctl disable --now tailscaled
+systemctl status tailscaled --no-pager || true
+```
+
+The host's old `100.x` Tailscale address stops working when its daemon is disabled.
+Use the routed LAN address (`192.168.1.10` in this repository) instead. The Connector
+has its own tailnet identity and does not inherit the host daemon's identity or IP.

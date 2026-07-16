@@ -1,0 +1,18 @@
+{{- if .Values.connector.enabled }}
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: {{ .Values.connector.name }}
+  labels:
+    {{- include "tailscale-platform.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.connector.replicas }}
+  {{- with .Values.connector.hostname }}
+  hostname: {{ . | quote }}
+  {{- end }}
+  tags:
+    {{- toYaml .Values.connector.tags | nindent 4 }}
+  subnetRouter:
+    advertiseRoutes:
+      {{- toYaml .Values.connector.subnetRouter.advertiseRoutes | nindent 6 }}
+{{- end }}

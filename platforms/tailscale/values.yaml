@@ -1,0 +1,59 @@
+tailscale-operator:
+  installCRDs: true
+  # The upstream chart mounts the operator-oauth Secret when these values are
+  # empty. That Secret is materialized from Vault by External Secrets below.
+  oauth:
+    clientId: ""
+    clientSecret: ""
+  operatorConfig:
+    hostname: homeserver-k8s-operator
+    logging: info
+    image:
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  proxyConfig:
+    defaultTags: tag:k8s
+  apiServerProxyConfig:
+    mode: "false"
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretName: operator-oauth
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    mountPath: kubernetes
+    role: tailscale
+    serviceAccountName: tailscale-vault-auth
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/tailscale
+    clientIdProperty: clientId
+    clientSecretProperty: clientSecret
+
+connector:
+  enabled: true
+  name: homeserver
+  hostname: homeserver-k8s
+  replicas: 1
+  tags:
+    - tag:k8s
+  subnetRouter:
+    advertiseRoutes:
+      # LAN containing the homeserver (192.168.1.10 in this repository).
+      - 192.168.1.0/24
+      # Default k3s Pod and Service CIDRs. Confirm these on the server before
+      # deployment and change them here if the cluster uses custom ranges.
+      - 10.42.0.0/16
+      - 10.43.0.0/16

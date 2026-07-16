@@ -6,6 +6,7 @@ resources:
   - platforms/vault/application.yaml
   - platforms/nginx-ingress/application.yaml
   - platforms/cloudflared/application.yaml
+  - platforms/tailscale/application.yaml
   - platforms/argocd/config/application.yaml
   - apps/gitea/application.yaml
   - apps/homepage/application.yaml

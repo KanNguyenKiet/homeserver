@@ -12,6 +12,7 @@ readonly CHARTS=(
   "platforms/vault"
   "platforms/nginx-ingress"
   "platforms/cloudflared"
+  "platforms/tailscale"
   "apps/gitea"
   "apps/homepage"
 )
@@ -21,6 +22,7 @@ readonly RELEASES=(
   "vault"
   "ingress-nginx"
   "cloudflared"
+  "tailscale"
   "gitea"
   "homepage"
 )
@@ -30,6 +32,7 @@ readonly NAMESPACES=(
   "vault"
   "ingress-nginx"
   "cloudflared"
+  "tailscale"
   "gitea"
   "homepage"
 )
@@ -109,6 +112,7 @@ log "Updating Helm dependencies"
 helm dependency update platforms/external-secrets
 helm dependency update platforms/vault
 helm dependency update platforms/nginx-ingress
+helm dependency update platforms/tailscale
 
 log "Linting and rendering Helm charts"
 render_dir="$(mktemp -d)"
@@ -153,7 +157,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault nginx-ingress cloudflared gitea homepage; do
+for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale gitea homepage; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

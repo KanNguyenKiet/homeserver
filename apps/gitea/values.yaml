@@ -38,12 +38,31 @@ gitea:
   rootUrl: https://git.huukiet.com
   database:
     type: postgres
-    host: postgres.default.svc.cluster.local:5432
+    # Native PostgreSQL running on the homeserver, outside Kubernetes.
+    # Replace this with the server's reserved LAN IP or local DNS name.
+    host: 192.168.1.10:5432
     existingSecret: gitea-secret
     secretKeys:
       name: DB_NAME
       user: DB_USER
       password: DB_PASS
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    serviceAccountName: gitea-vault-auth
+    mountPath: kubernetes
+    role: gitea
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/gitea
 
 podSecurityContext:
   fsGroup: 1000
