@@ -40,7 +40,7 @@ gitea:
     type: postgres
     # Native PostgreSQL running on the homeserver, outside Kubernetes.
     # Replace this with the server's reserved LAN IP or local DNS name.
-    host: 192.168.1.10:5432
+    host: 192.168.100.11:5432
     existingSecret: gitea-secret
     secretKeys:
       name: DB_NAME
