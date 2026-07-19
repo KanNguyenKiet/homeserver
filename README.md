@@ -313,6 +313,13 @@ The bootstrap script:
   `kv/homeserver/cloudflared`.
 - Waits for External Secrets and the Cloudflared Deployment to become Ready.
 
+If the recovery file has not yet been moved off this host, retrieve the root token
+and unseal keys with (adjust the path if a different `VAULT_INIT_OUTPUT` was used):
+
+```bash
+sudo cat /var/lib/vault-bootstrap/vault-init.json
+```
+
 Immediately move the recovery file to encrypted offline storage, separate its unseal
 key shares, and delete the server copy. Never store the recovery file, root token, or
 unseal keys in this repository or in the Kubernetes cluster. The tunnel token's source

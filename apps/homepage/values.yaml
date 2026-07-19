@@ -62,85 +62,151 @@ config:
   kubernetesYaml: |
     mode: cluster
   bookmarksYaml: |
-    - Developer:
-        - GitHub:
+    - Homelab:
+        - Homeserver:
             - abbr: GH
-              href: https://github.com/
+              href: https://git.huukiet.com/huukiethk2804/homeserver
+              description: Public homelab repository
   settingsYaml: |
     title: Kiet Home
-    description: Homelab Control Center
     theme: dark
     color: slate
+    fullWidth: true
+    maxGroupColumns: 4
+    hideVersion: true
+    disableCollapse: true
+    useEqualHeights: true
+    iconStyle: theme
     background:
-      image: https://images.unsplash.com/photo-1502790671504-542ad42d5189?auto=format&fit=crop&w=2560&q=80
-      blur: sm
-      saturate: 50
-      brightness: 50
-      opacity: 70
-    cardBlur: xs
-    headerStyle: boxed
+      image: https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2560&q=80
+      opacity: 30
+    headerStyle: boxedWidgets
     statusStyle: dot
     target: _blank
+    layout:
+      Development:
+        icon: mdi-code-braces
+      Managed Services:
+        icon: si-cloudflare
+      Infrastructure:
+        icon: mdi-server-network
+      Homelab:
+        icon: mdi-home-assistant
   servicesYaml: |
+    - Development:
+        - Gitea:
+            icon: gitea.svg
+            href: https://git.huukiet.com
+            description: Git forge
+        - Argo CD:
+            icon: argocd.svg
+            href: https://argocd.huukiet.com
+            description: Continuous deployment
+    - Managed Services:
+        - Cloudflare:
+            icon: si-cloudflare
+            href: https://dash.cloudflare.com
+            description: dash.cloudflare.com
+        - Tailscale:
+            icon: tailscale.svg
+            href: https://login.tailscale.com/admin
+            description: login.tailscale.com
     - Infrastructure:
         - Server:
+            icon: mdi-kubernetes
             href: https://home.huukiet.com
-            description: Ubuntu Kubernetes server
-        - Argo CD:
-            href: https://argocd.huukiet.com
-            description: GitOps deployment dashboard
-        - Gitea:
-            href: https://git.huukiet.com
-            description: Self-hosted Git repository
-        - Cloudflare:
-            href: https://dash.cloudflare.com
-            description: Tunnel, DNS, and edge settings
-        - Tailscale:
-            href: https://login.tailscale.com/admin
-            description: VPN mesh and subnet routes
+            description: home.huukiet.com
   widgetsYaml: |
-    - kubernetes:
-        cluster:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-          label: cluster
-        nodes:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-    - resources:
-        backend: resources
-        expanded: true
-        cpu: true
-        memory: true
-        network: default
     - search:
-        provider: duckduckgo
+        provider: google
+        focus: false
+        showSearchSuggestions: true
         target: _blank
   customCss: |
     body {
       font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     }
 
+    #page_wrapper {
+      min-height: 100vh;
+    }
+
     #page_container {
       backdrop-filter: none;
+      background: transparent !important;
+      max-width: 88rem;
+      padding-top: 2rem;
+      padding-bottom: 3rem;
+    }
+
+    #header {
+      margin-bottom: 2.5rem;
+    }
+
+    #header h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      opacity: 0.9;
+    }
+
+    .service-group-name,
+    .bookmark-group-name {
+      font-size: 1.05rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      opacity: 0.82;
+      margin-bottom: 0.85rem;
+    }
+
+    .services-group,
+    .bookmarks-group {
+      gap: 0.65rem;
+    }
+
+    #widgets-wrap {
+      width: 100%;
+      max-width: 42rem;
+      margin: 0 auto 2rem;
+    }
+
+    .search-widget {
+      width: 100%;
+    }
+
+    .search-widget form {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(14px);
+      border-radius: 9999px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
     }
 
     .service-card,
     .bookmark-card {
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(15, 23, 42, 0.54) !important;
-      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.42) !important;
+      backdrop-filter: blur(14px);
+      border-radius: 0.85rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
     }
 
     .service-card:hover,
     .bookmark-card:hover {
-      transform: translateY(-2px);
-      transition: transform 160ms ease, border-color 160ms ease;
-      border-color: rgba(125, 211, 252, 0.55);
+      transform: translateY(-1px);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(15, 23, 42, 0.52) !important;
+    }
+
+    .service-title,
+    .bookmark-title {
+      font-weight: 500;
+    }
+
+    .service-description,
+    .bookmark-description {
+      opacity: 0.72;
     }
   customJs: ""
   dockerYaml: ""
