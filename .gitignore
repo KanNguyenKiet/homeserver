@@ -4,3 +4,6 @@
 
 # Vault recovery material must never be committed
 vault-init*.json
+
+# Compiled vaultsecret binary
+scripts/vaultsecret/vaultsecret

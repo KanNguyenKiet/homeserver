@@ -18,6 +18,7 @@ homeserver/
 |   |-- tailscale/                   # Tailscale Operator and subnet connector
 |   `-- vault/                       # HashiCorp Vault wrapper Helm chart
 |-- scripts/                         # Vault bootstrap and unseal operations
+|   `-- vaultsecret/                 # Generic Go CLI for writing Vault secrets
 |-- kustomization.yaml               # Root and child Application resources
 |-- root-application.yaml            # GitOps entry point
 `-- README.md
@@ -155,13 +156,56 @@ sudo ufw allow from 10.42.0.0/16 to 192.168.1.10 port 5432 proto tcp
 ```
 
 Update `apps/gitea/values.yaml` if the PostgreSQL host is not
-`192.168.1.10:5432`, deploy the Git revision, then create the Gitea database and
-Vault secret:
+`192.168.1.10:5432`, deploy the Git revision, then create the Gitea role and
+database. This is safe to re-run; it only creates the role/database if they do
+not already exist, and always updates the role's password:
 
 ```bash
 git pull --ff-only origin master
 bash deploy.sh
-bash scripts/configure-gitea-postgresql.sh
+
+read -r -s -p "Gitea PostgreSQL password: " GITEA_DB_PASSWORD; echo
+sudo -u postgres psql \
+  --set ON_ERROR_STOP=1 \
+  --set db_password="$GITEA_DB_PASSWORD" <<'SQL'
+SELECT format(
+  'CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION',
+  'gitea'
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_roles WHERE rolname = 'gitea'
+)\gexec
+
+ALTER ROLE gitea WITH PASSWORD :'db_password';
+
+SELECT format(
+  'CREATE DATABASE %I OWNER %I TEMPLATE template0 ENCODING ''UTF8''',
+  'gitea', 'gitea'
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_database WHERE datname = 'gitea'
+)\gexec
+
+REVOKE ALL ON DATABASE gitea FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE gitea TO gitea;
+SQL
+unset GITEA_DB_PASSWORD
+```
+
+Then write the same credentials to Vault with `vaultsecret` (see
+[Generic Vault secret helper (vaultsecret)](#generic-vault-secret-helper-vaultsecret)
+below for how to build it). This creates a Vault policy and Kubernetes auth
+role restricted to the `gitea/gitea-vault-auth` ServiceAccount, writes the
+credentials to `kv/homeserver/gitea`, and waits for External Secrets to sync
+the `gitea/gitea-secret` Secret:
+
+```bash
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/gitea \
+  -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
+  -policy gitea-db-read -role gitea \
+  -bound-sa gitea-vault-auth -bound-namespace gitea \
+  -wait-externalsecret gitea-secret -app-namespace gitea
 ```
 
 Verify Gitea can connect from inside Kubernetes:
@@ -197,16 +241,25 @@ Authorization callback URL: https://argocd.huukiet.com/api/dex/callback
 ```
 
 Deploy the Git revision containing the Argo CD configuration, then write the OAuth
-client ID and client secret to Vault:
+client ID and client secret to Vault with `vaultsecret` (see
+[Generic Vault secret helper (vaultsecret)](#generic-vault-secret-helper-vaultsecret)
+below for how to build it):
 
 ```bash
 git pull --ff-only origin master
 bash deploy.sh
-bash scripts/configure-argocd-github-oauth.sh
+
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/argocd \
+  -set-prompt githubClientID -set-prompt githubClientSecret \
+  -policy argocd-github-oauth-read -role argocd \
+  -bound-sa argocd-vault-auth -bound-namespace argocd \
+  -wait-externalsecret argocd-github-oauth -app-namespace argocd \
+  -restart argocd-dex-server -restart argocd-server
 ```
 
-The script securely prompts for the Vault root token and both OAuth values. It creates
-a Vault policy and Kubernetes auth role restricted to the
+`vaultsecret` securely prompts for the Vault root token and both OAuth values. It
+creates a Vault policy and Kubernetes auth role restricted to the
 `argocd/argocd-vault-auth` ServiceAccount, writes the credentials to
 `kv/homeserver/argocd`, waits for External Secrets, and restarts the Argo CD server
 and Dex.
@@ -285,6 +338,53 @@ kubectl -n vault port-forward service/vault-ui 8200:8200
 
 Then open `http://127.0.0.1:8200`. Back up the Vault Raft data regularly; the retained
 PVC protects against accidental workload deletion but is not a backup.
+
+## Generic Vault secret helper (vaultsecret)
+
+`scripts/vaultsecret` is a small, dependency-free Go CLI for writing Vault secrets:
+creating a read-only policy, creating a Kubernetes auth role bound to one
+ServiceAccount, writing the KV v2 secret fields, and waiting for External Secrets
+to sync the result. Adding a new secret to Vault never requires writing a new shell
+script; the Gitea, Argo CD, and Tailscale sections above all use it. See
+`scripts/vaultsecret/README.md` for the full flag reference and more examples.
+
+Build it once (Go 1.25+, zero third-party dependencies, so no network access is
+required to build it):
+
+```bash
+cd scripts/vaultsecret
+go build -o vaultsecret .
+```
+
+Vault is only ever reached through `kubectl exec` into the Vault Pod; the tool
+never needs network access to Vault itself. Secret values are sent over the exec
+stdin pipe and are never printed, passed as command-line arguments, or set as an
+environment variable of a child process.
+
+Preview any invocation without touching the cluster by adding `-dry-run`, for
+example:
+
+```bash
+./vaultsecret -dry-run \
+  -path homeserver/gitea \
+  -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
+  -policy gitea-db-read -role gitea \
+  -bound-sa gitea-vault-auth -bound-namespace gitea \
+  -wait-externalsecret gitea-secret -app-namespace gitea
+```
+
+Drop `-dry-run` to run it for real. It waits for Vault to be initialized and
+unsealed, prompts for the Vault root token (or reads `VAULT_ROOT_TOKEN` from the
+environment) and for each `-set-prompt` field, writes the policy and Kubernetes
+auth role, writes the KV v2 secret, then waits for the named
+`SecretStore`/`ExternalSecret` to sync and force-syncs it.
+
+To update only some fields of an existing multi-field secret, such as rotating one
+credential without touching the others, add `-patch`; without it, the tool performs
+a full `vault kv put`, which replaces every field in that secret with whatever this
+invocation supplies. Run `./vaultsecret -h` for the full flag reference, including
+`-set-file`, `-set-env`, `-restart` (rollout-restart a Deployment after the sync),
+and `-policy-capabilities`.
 
 ## Cloudflare Tunnel
 
@@ -376,16 +476,24 @@ the client the `tag:k8s-operator` tag. Save its client ID and secret temporarily
 secret is shown only once.
 
 Deploy the Git revision first. The Operator Pod initially waiting for the
-`operator-oauth` Secret is expected. Then store the OAuth credentials in Vault and
-wait for the Operator and Connector:
+`operator-oauth` Secret is expected. Then store the OAuth credentials in Vault with
+`vaultsecret` (see
+[Generic Vault secret helper (vaultsecret)](#generic-vault-secret-helper-vaultsecret)
+below for how to build it) and wait for the Operator and Connector:
 
 ```bash
 git pull --ff-only origin master
 bash deploy.sh
-bash scripts/configure-tailscale-oauth.sh
+
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/tailscale \
+  -set-prompt clientId -set-prompt clientSecret \
+  -policy tailscale-oauth-read -role tailscale \
+  -bound-sa tailscale-vault-auth -bound-namespace tailscale \
+  -wait-externalsecret operator-oauth -app-namespace tailscale
 ```
 
-The script creates a Vault policy and Kubernetes auth role restricted to the
+This creates a Vault policy and Kubernetes auth role restricted to the
 `tailscale/tailscale-vault-auth` ServiceAccount. External Secrets reads
 `kv/homeserver/tailscale`, creates `tailscale/operator-oauth`, and refreshes it hourly.
 No Tailscale OAuth credential is stored in Git.
