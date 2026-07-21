@@ -102,6 +102,10 @@ config:
             icon: argocd.svg
             href: https://argocd.huukiet.com
             description: Continuous deployment
+        - Wiki:
+            icon: mdi-book-open-page-variant
+            href: https://wiki.huukiet.com
+            description: Stack documentation
     - Managed Services:
         - Cloudflare:
             icon: si-cloudflare

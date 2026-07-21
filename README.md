@@ -9,6 +9,9 @@ platforms and applications to the cluster.
 ```text
 homeserver/
 |-- apps/                            # Local Helm charts for workloads
+|   |-- gitea/                       # Self-hosted Git forge
+|   |-- homepage/                    # Service dashboard
+|   `-- wiki/                        # Static stack documentation site
 |-- platforms/                       # Cluster services
 |   |-- argocd/
 |   |   `-- config/                  # Argo CD configuration managed through GitOps
@@ -74,15 +77,16 @@ wrapper Helm charts in `platforms/`. Each chart keeps its `application.yaml` bes
 downloaded during the dependency build. Generated `Chart.lock` and `charts/*.tgz` files
 are ignored and are not committed.
 
-Cloudflared, Gitea, and Homepage are local Helm charts. Argo CD renders these charts
-directly from Git. Each application's configuration is stored in its corresponding
-`values.yaml` file.
+Cloudflared, Gitea, Homepage, and Wiki are local Helm charts. Argo CD renders these
+charts directly from Git. Each application's configuration is stored in its
+corresponding `values.yaml` file.
 
 - To change a platform dependency version, update the dependency in `Chart.yaml`.
   Before linting or rendering locally, run
   `helm dependency update platforms/<platform>`.
 - To change platform configuration, edit `platforms/<platform>/values.yaml`.
-- To change Gitea or Homepage configuration, edit `apps/<app>/values.yaml`.
+- To change Gitea, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
+- To change Wiki content, edit the HTML and CSS files in `apps/wiki/files/`.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
 - To change Tailscale routes, tags, or connector settings, edit
@@ -409,11 +413,12 @@ kubectl -n cloudflared rollout status deployment/cloudflared
 kubectl -n cloudflared get pods
 ```
 
-For Homepage, configure the tunnel's public hostname route in the Cloudflare dashboard
-with this service URL:
+For Homepage and Wiki, configure the tunnel's public hostname routes in the
+Cloudflare dashboard with these service URLs:
 
 ```text
 http://homepage.homepage.svc.cluster.local:3000
+http://wiki.wiki.svc.cluster.local:80
 ```
 
 Wait until both Kubernetes connector replicas are Ready and the tunnel is Healthy in

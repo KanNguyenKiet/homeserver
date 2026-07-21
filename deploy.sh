@@ -15,6 +15,7 @@ readonly CHARTS=(
   "platforms/tailscale"
   "apps/gitea"
   "apps/homepage"
+  "apps/wiki"
 )
 
 readonly RELEASES=(
@@ -25,6 +26,7 @@ readonly RELEASES=(
   "tailscale"
   "gitea"
   "homepage"
+  "wiki"
 )
 
 readonly NAMESPACES=(
@@ -35,6 +37,7 @@ readonly NAMESPACES=(
   "tailscale"
   "gitea"
   "homepage"
+  "wiki"
 )
 
 log() {
@@ -157,7 +160,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale gitea homepage; do
+for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale gitea homepage wiki; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 
