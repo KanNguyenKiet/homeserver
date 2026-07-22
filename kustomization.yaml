@@ -8,6 +8,7 @@ resources:
   - platforms/cloudflared/application.yaml
   - platforms/tailscale/application.yaml
   - platforms/monitoring/application.yaml
+  - apps/grafana-dashboards/application.yaml
   - platforms/argocd/config/application.yaml
   - apps/gitea/application.yaml
   - apps/homepage/application.yaml

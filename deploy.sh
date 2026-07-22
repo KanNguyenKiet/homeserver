@@ -164,7 +164,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale monitoring gitea homepage wiki; do
+for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea homepage wiki; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

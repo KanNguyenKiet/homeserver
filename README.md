@@ -11,6 +11,7 @@ homeserver/
 |-- apps/                            # Local Helm charts for workloads
 |   |-- gitea/                       # Self-hosted Git forge
 |   |-- homepage/                    # Service dashboard
+|   |-- grafana-dashboards/          # Argo CD Application for dashboard Git repo
 |   `-- wiki/                        # MkDocs Material documentation site
 |-- platforms/                       # Cluster services
 |   |-- argocd/
@@ -592,3 +593,24 @@ kubectl -n monitoring get pods
 Open `https://grafana.huukiet.com` after Cloudflare routes the hostname to
 `http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80`. Prometheus
 is preconfigured as the default Grafana data source.
+
+### Dashboard Git sync
+
+Custom dashboards live in a separate Gitea repository,
+[grafana-dashboards](https://git.huukiet.com/huukiethk2804/grafana-dashboards). Argo CD
+Application `grafana-dashboards` syncs Kustomize-generated ConfigMaps into the
+`monitoring` namespace. Grafana's built-in sidecar watches for ConfigMaps labeled
+`grafana_dashboard: "1"` and loads them automatically.
+
+To add a dashboard:
+
+1. Export JSON from Grafana or download from
+   [grafana.com/grafana/dashboards](https://grafana.com/grafana/dashboards).
+2. Add the file under `dashboards/` in the grafana-dashboards repo and register it
+   in `kustomization.yaml` (see that repo's README).
+3. Push to `master`. Argo CD creates or updates the ConfigMap; Grafana picks it up
+   within about 30 seconds.
+
+UI edits to Git-managed dashboards are disabled (`allowUiUpdates: false`); changes
+must go through the repository. Default kube-prometheus-stack dashboards remain
+available alongside the Git-synced ones.

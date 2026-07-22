@@ -19,6 +19,17 @@ kube-prometheus-stack:
   grafana:
     enabled: true
     defaultDashboardsEnabled: true
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: ALL
+        folderAnnotation: grafana_folder
+        provider:
+          foldersFromFilesStructure: true
+          allowUiUpdates: false
+          disableDeletion: false
     admin:
       existingSecret: grafana-admin
       userKey: admin-user
