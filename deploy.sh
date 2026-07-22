@@ -15,6 +15,7 @@ readonly CHARTS=(
   "platforms/tailscale"
   "platforms/monitoring"
   "apps/gitea"
+  "apps/grafana-dashboards"
   "apps/homepage"
   "apps/wiki"
 )
@@ -27,6 +28,7 @@ readonly RELEASES=(
   "tailscale"
   "kube-prometheus-stack"
   "gitea"
+  "grafana-dashboards"
   "homepage"
   "wiki"
 )
@@ -39,6 +41,7 @@ readonly NAMESPACES=(
   "tailscale"
   "monitoring"
   "gitea"
+  "monitoring"
   "homepage"
   "wiki"
 )

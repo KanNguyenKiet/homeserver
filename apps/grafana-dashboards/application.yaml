@@ -9,10 +9,20 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
 spec:
   project: default
-  source:
-    repoURL: https://git.huukiet.com/huukiethk2804/grafana-dashboards.git
-    targetRevision: master
-    path: .
+  sources:
+    - repoURL: https://git.huukiet.com/ops/grafana-dashboard.git
+      targetRevision: master
+      ref: dashboards
+    - repoURL: https://github.com/KanNguyenKiet/homeserver.git
+      targetRevision: master
+      path: apps/grafana-dashboards
+      helm:
+        releaseName: grafana-dashboards
+        valueFiles:
+          - values.yaml
+        fileParameters:
+          - name: dashboardFiles.homelabOverview
+            path: $dashboards/homelab-overview.json
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

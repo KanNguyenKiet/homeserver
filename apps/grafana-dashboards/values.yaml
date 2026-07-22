@@ -1,0 +1,19 @@
+# Dashboard registry. JSON content is loaded at deploy time from the
+# grafana-dashboard Git repository via Argo CD fileParameters.
+#
+# When adding a dashboard:
+# 1. Add the JSON file to git.huukiet.com/ops/grafana-dashboard
+# 2. Add an entry below
+# 3. Add a matching fileParameters entry in application.yaml
+
+dashboards:
+  - name: homelab-overview
+    folder: Homelab
+    file: homelab-overview.json
+    fileKey: homelabOverview
+
+# Placeholder content for local `helm template` and `helm lint`. Argo CD
+# overrides these values with fileParameters from the dashboard Git repo.
+dashboardFiles:
+  homelabOverview: |
+    {"title":"Homelab Overview","uid":"homelab-overview","panels":[]}

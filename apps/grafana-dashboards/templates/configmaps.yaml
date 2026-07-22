@@ -1,0 +1,19 @@
+{{- range .Values.dashboards }}
+{{- $content := index $.Values.dashboardFiles .fileKey }}
+{{- if not $content }}
+{{- fail (printf "dashboardFiles.%s is required for dashboard %s" .fileKey .name) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "grafana-dashboards.labels" $ | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: {{ .folder | quote }}
+data:
+  {{ .file }}: |
+{{ $content | nindent 4 }}
+{{- end }}

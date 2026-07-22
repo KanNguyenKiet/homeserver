@@ -11,7 +11,7 @@ homeserver/
 |-- apps/                            # Local Helm charts for workloads
 |   |-- gitea/                       # Self-hosted Git forge
 |   |-- homepage/                    # Service dashboard
-|   |-- grafana-dashboards/          # Argo CD Application for dashboard Git repo
+|   |-- grafana-dashboards/          # Helm chart for dashboard ConfigMaps
 |   `-- wiki/                        # MkDocs Material documentation site
 |-- platforms/                       # Cluster services
 |   |-- argocd/
@@ -596,21 +596,24 @@ is preconfigured as the default Grafana data source.
 
 ### Dashboard Git sync
 
-Custom dashboards live in a separate Gitea repository,
-[grafana-dashboards](https://git.huukiet.com/huukiethk2804/grafana-dashboards). Argo CD
-Application `grafana-dashboards` syncs Kustomize-generated ConfigMaps into the
-`monitoring` namespace. Grafana's built-in sidecar watches for ConfigMaps labeled
-`grafana_dashboard: "1"` and loads them automatically.
+### Dashboard Git sync
+
+Custom dashboard JSON lives in a separate Gitea repository,
+[grafana-dashboard](https://git.huukiet.com/ops/grafana-dashboard). The
+`apps/grafana-dashboards` Helm chart in this repository renders labeled
+ConfigMaps; Argo CD combines both sources and syncs them into the `monitoring`
+namespace. Grafana's sidecar loads ConfigMaps labeled `grafana_dashboard: "1"`.
 
 To add a dashboard:
 
 1. Export JSON from Grafana or download from
    [grafana.com/grafana/dashboards](https://grafana.com/grafana/dashboards).
-2. Add the file under `dashboards/` in the grafana-dashboards repo and register it
-   in `kustomization.yaml` (see that repo's README).
-3. Push to `master`. Argo CD creates or updates the ConfigMap; Grafana picks it up
+2. Add the `.json` file to the grafana-dashboard repository.
+3. Register it in `apps/grafana-dashboards/values.yaml` and add a matching
+   `fileParameters` entry in `apps/grafana-dashboards/application.yaml`.
+4. Push both repositories. Argo CD updates the ConfigMap; Grafana picks it up
    within about 30 seconds.
 
 UI edits to Git-managed dashboards are disabled (`allowUiUpdates: false`); changes
-must go through the repository. Default kube-prometheus-stack dashboards remain
-available alongside the Git-synced ones.
+must go through Git. Default kube-prometheus-stack dashboards remain available
+alongside the Git-synced ones.
