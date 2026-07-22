@@ -105,7 +105,11 @@ config:
         - Wiki:
             icon: mdi-book-open-page-variant
             href: https://wiki.huukiet.com
-            description: Stack documentation
+            description: MkDocs stack documentation
+        - Grafana:
+            icon: grafana.svg
+            href: https://grafana.huukiet.com
+            description: Cluster and system monitoring
     - Managed Services:
         - Cloudflare:
             icon: si-cloudflare

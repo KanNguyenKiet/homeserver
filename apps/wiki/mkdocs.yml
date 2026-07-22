@@ -1,0 +1,76 @@
+site_name: Homeserver Wiki
+site_url: https://wiki.huukiet.com
+site_description: How I built my GitOps homeserver on k3s
+
+repo_url: https://github.com/KanNguyenKiet/homeserver
+repo_name: KanNguyenKiet/homeserver
+edit_uri: edit/master/apps/wiki/docs/
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: slate
+      primary: blue grey
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: blue grey
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+
+nav:
+  - Home: index.md
+  - Design goals: goals.md
+  - Architecture: architecture.md
+  - Components: components.md
+  - Secret management: secrets.md
+  - Networking: networking.md
+  - Build journey: build-journey.md
+  - Tradeoffs: tradeoffs.md
+  - Links: links.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/KanNguyenKiet/homeserver
+
+copyright: Maintained in Git · Deployed by Argo CD · Built with MkDocs Material

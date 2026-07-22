@@ -11,13 +11,14 @@ homeserver/
 |-- apps/                            # Local Helm charts for workloads
 |   |-- gitea/                       # Self-hosted Git forge
 |   |-- homepage/                    # Service dashboard
-|   `-- wiki/                        # Static stack documentation site
+|   `-- wiki/                        # MkDocs Material documentation site
 |-- platforms/                       # Cluster services
 |   |-- argocd/
 |   |   `-- config/                  # Argo CD configuration managed through GitOps
 |   |-- cloudflared/                 # Cloudflare Tunnel connector Helm chart
 |   |-- external-secrets/            # External Secrets wrapper Helm chart
 |   |-- nginx-ingress/               # ingress-nginx wrapper Helm chart
+|   |-- monitoring/                  # Prometheus and Grafana monitoring stack
 |   |-- tailscale/                   # Tailscale Operator and subnet connector
 |   `-- vault/                       # HashiCorp Vault wrapper Helm chart
 |-- scripts/                         # Vault bootstrap and unseal operations
@@ -71,11 +72,11 @@ that Application. Carefully review this type of change before merging it.
 
 ## Helm charts
 
-External Secrets, HashiCorp Vault, ingress-nginx, and the Tailscale Operator are local
-wrapper Helm charts in `platforms/`. Each chart keeps its `application.yaml` beside
-`Chart.yaml`. The upstream chart is declared as a dependency in `Chart.yaml` and
-downloaded during the dependency build. Generated `Chart.lock` and `charts/*.tgz` files
-are ignored and are not committed.
+External Secrets, HashiCorp Vault, ingress-nginx, kube-prometheus-stack, and the
+Tailscale Operator are local wrapper Helm charts in `platforms/`. Each chart keeps
+its `application.yaml` beside `Chart.yaml`. The upstream chart is declared as a
+dependency in `Chart.yaml` and downloaded during the dependency build. Generated
+`Chart.lock` and `charts/*.tgz` files are ignored and are not committed.
 
 Cloudflared, Gitea, Homepage, and Wiki are local Helm charts. Argo CD renders these
 charts directly from Git. Each application's configuration is stored in its
@@ -85,8 +86,12 @@ corresponding `values.yaml` file.
   Before linting or rendering locally, run
   `helm dependency update platforms/<platform>`.
 - To change platform configuration, edit `platforms/<platform>/values.yaml`.
+- To change Grafana ingress, retention, or resource limits, edit
+  `platforms/monitoring/values.yaml`.
 - To change Gitea, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
-- To change Wiki content, edit the HTML and CSS files in `apps/wiki/files/`.
+- To change Wiki content, edit the Markdown files in `apps/wiki/docs/` and push to
+  `master`. GitHub Actions builds a container image and updates the tag in
+  `apps/wiki/values.yaml`.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
 - To change Tailscale routes, tags, or connector settings, edit
@@ -419,6 +424,7 @@ Cloudflare dashboard with these service URLs:
 ```text
 http://homepage.homepage.svc.cluster.local:3000
 http://wiki.wiki.svc.cluster.local:80
+http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80
 ```
 
 Wait until both Kubernetes connector replicas are Ready and the tunnel is Healthy in
@@ -546,3 +552,43 @@ systemctl status tailscaled --no-pager || true
 The host's old `100.x` Tailscale address stops working when its daemon is disabled.
 Use the routed LAN address (`192.168.1.10` in this repository) instead. The Connector
 has its own tailnet identity and does not inherit the host daemon's identity or IP.
+
+## Grafana and Prometheus
+
+The monitoring stack runs in the `monitoring` namespace through the upstream
+`kube-prometheus-stack` chart. It deploys Grafana, Prometheus, Alertmanager,
+node-exporter, and kube-state-metrics with the default Kubernetes and node
+dashboards enabled.
+
+Grafana is exposed at `https://grafana.huukiet.com` through the nginx Ingress.
+Prometheus and Alertmanager remain internal ClusterIP services. Admin credentials
+are read from Vault through External Secrets and are never stored in Git.
+
+Deploy the Git revision first. Grafana will wait for the admin Secret before it
+becomes Ready. Then write the credentials to Vault with `vaultsecret`:
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/grafana \
+  -set-prompt adminUser -set-prompt adminPassword \
+  -policy grafana-admin-read -role grafana \
+  -bound-sa grafana-vault-auth -bound-namespace monitoring \
+  -wait-externalsecret grafana-admin -app-namespace monitoring \
+  -restart kube-prometheus-stack-grafana
+```
+
+Use any username for `adminUser`; Grafana reads it from the synced Secret. Verify
+the deployment with:
+
+```bash
+kubectl -n monitoring get secretstore,externalsecret
+kubectl -n monitoring rollout status deployment/kube-prometheus-stack-grafana
+kubectl -n monitoring get pods
+```
+
+Open `https://grafana.huukiet.com` after Cloudflare routes the hostname to
+`http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80`. Prometheus
+is preconfigured as the default Grafana data source.

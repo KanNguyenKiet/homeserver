@@ -7,3 +7,7 @@ vault-init*.json
 
 # Compiled vaultsecret binary
 scripts/vaultsecret/vaultsecret
+
+# MkDocs local build artifacts
+apps/wiki/.venv/
+apps/wiki/site/

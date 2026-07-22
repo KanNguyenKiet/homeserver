@@ -1,0 +1,105 @@
+kube-prometheus-stack:
+  crds:
+    enabled: true
+
+  defaultRules:
+    create: true
+
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+
+  grafana:
+    enabled: true
+    defaultDashboardsEnabled: true
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      annotations: {}
+      hosts:
+        - grafana.huukiet.com
+      path: /
+      pathType: Prefix
+      tls: []
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  prometheus:
+    prometheusSpec:
+      retention: 15d
+      retentionSize: 8GB
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+
+  prometheus-node-exporter:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 32Mi
+      limits:
+        cpu: 200m
+        memory: 64Mi
+
+  kube-state-metrics:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretName: grafana-admin
+  secretKeys:
+    user: admin-user
+    password: admin-password
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    serviceAccountName: grafana-vault-auth
+    mountPath: kubernetes
+    role: grafana
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/grafana
+    adminUserProperty: adminUser
+    adminPasswordProperty: adminPassword

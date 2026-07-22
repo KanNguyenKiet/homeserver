@@ -11,15 +11,13 @@ spec:
       {{- include "wiki.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      annotations:
-        checksum/content: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
       labels:
         {{- include "wiki.selectorLabels" . | nindent 8 }}
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: nginx
+        - name: wiki
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
@@ -43,23 +41,11 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - name: content
-              mountPath: /usr/share/nginx/html
-              readOnly: true
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d
-              readOnly: true
             - name: cache
               mountPath: /var/cache/nginx
             - name: run
               mountPath: /tmp
       volumes:
-        - name: content
-          configMap:
-            name: {{ include "wiki.fullname" . }}-content
-        - name: nginx-config
-          configMap:
-            name: {{ include "wiki.fullname" . }}-nginx
         - name: cache
           emptyDir: {}
         - name: run

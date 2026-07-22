@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: nginxinc/nginx-unprivileged
-  tag: "1.27-alpine"
-  pullPolicy: IfNotPresent
+  repository: ghcr.io/kannguyenkiet/homeserver-wiki
+  tag: latest
+  pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""
@@ -48,10 +48,10 @@ probes:
 resources:
   requests:
     cpu: 10m
-    memory: 16Mi
+    memory: 32Mi
   limits:
     cpu: 100m
-    memory: 64Mi
+    memory: 128Mi
 
 nodeSelector: {}
 tolerations: []

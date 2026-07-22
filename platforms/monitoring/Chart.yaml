@@ -1,0 +1,10 @@
+apiVersion: v2
+name: monitoring-platform
+description: Prometheus and Grafana monitoring stack for the homeserver cluster
+type: application
+version: 0.1.0
+appVersion: "0.92.1"
+dependencies:
+  - name: kube-prometheus-stack
+    version: "67.11.0"
+    repository: https://prometheus-community.github.io/helm-charts
