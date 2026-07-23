@@ -36,6 +36,8 @@ persistence:
 
 gitea:
   rootUrl: https://git.huukiet.com
+  actions:
+    enabled: true
   database:
     type: postgres
     # Native PostgreSQL running on the homeserver, outside Kubernetes.

@@ -26,3 +26,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "wiki.selectorLabels" -}}
 app: {{ include "wiki.name" . }}
 {{- end }}
+
+{{- define "wiki.contentChecksum" -}}
+{{- printf "%s%s%s%s" ((.Files.Glob "docs/**").AsConfig) (.Files.Get "mkdocs.yml") (.Files.Get "Dockerfile") ((.Files.Glob "nginx/**").AsConfig) | sha256sum -}}
+{{- end }}

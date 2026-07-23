@@ -1,0 +1,47 @@
+actions:
+  enabled: true
+  # Reach Gitea in-cluster; the runner init container probes this URL.
+  giteaRootURL: http://gitea.gitea.svc.cluster.local:3000/
+  existingSecret: gitea-actions-token
+  existingSecretKey: token
+  statefulset:
+    replicas: 1
+    persistence:
+      size: 5Gi
+    runner:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 1000m
+          memory: 512Mi
+    dind:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretName: gitea-actions-token
+  secretKeys:
+    token: token
+  secretStore:
+    name: gitea-actions-vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    serviceAccountName: gitea-actions-vault-auth
+    mountPath: kubernetes
+    role: gitea-actions
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/gitea-actions
+    registrationTokenProperty: registrationToken

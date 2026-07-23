@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/kannguyenkiet/homeserver-wiki
-  tag: latest
-  pullPolicy: Always
+  repository: homeserver-wiki
+  tag: local
+  pullPolicy: Never
 
 nameOverride: ""
 fullnameOverride: ""

@@ -15,20 +15,27 @@ mkdocs serve
 
 Open http://127.0.0.1:8000
 
-## Build the container image locally
-
-```bash
-docker build -t ghcr.io/kannguyenkiet/homeserver-wiki:local apps/wiki
-docker run --rm -p 8080:8080 ghcr.io/kannguyenkiet/homeserver-wiki:local
-```
-
 ## Production workflow
+
+No GitHub Actions or container registry is required. The homeserver builds the image
+locally during deployment.
 
 1. Edit Markdown files in `docs/`
 2. Push to `master`
-3. GitHub Actions builds and pushes `ghcr.io/kannguyenkiet/homeserver-wiki:<sha>`
-4. The workflow commits the new image tag to `values.yaml`
-5. Argo CD syncs the updated Deployment
+3. On the server, run `bash deploy.sh`
+4. The script calls `scripts/build-wiki-image.sh`, which runs `docker build` and
+   imports `homeserver-wiki:local` into k3s
+5. Argo CD syncs the Deployment. When wiki content changes, a Helm checksum annotation
+   changes and Kubernetes rolls the Pod
+
+## Build the image manually
+
+```bash
+bash scripts/build-wiki-image.sh
+docker run --rm -p 8080:8080 homeserver-wiki:local
+```
+
+Requires `docker` and `k3s` on the server.
 
 ## Structure
 

@@ -12,6 +12,6 @@
 - **Cloudflare TLS termination.** Traffic between Cloudflare and the cluster is
   encrypted by the tunnel, but origin certificates are not publicly trusted.
 
-- **MkDocs wiki.** Content changes require a Git commit, a container image rebuild via
-  GitHub Actions, and an Argo CD sync — not in-browser editing. That matches the
+- **MkDocs wiki.** Content changes require a Git commit and a server-side image build
+  through `deploy.sh`, then an Argo CD sync — not in-browser editing. That matches the
   GitOps model.

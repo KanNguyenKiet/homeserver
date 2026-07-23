@@ -15,6 +15,7 @@ readonly CHARTS=(
   "platforms/tailscale"
   "platforms/monitoring"
   "apps/gitea"
+  "apps/gitea-actions"
   "apps/grafana-dashboards"
   "apps/homepage"
   "apps/wiki"
@@ -28,6 +29,7 @@ readonly RELEASES=(
   "tailscale"
   "kube-prometheus-stack"
   "gitea"
+  "gitea-actions"
   "grafana-dashboards"
   "homepage"
   "wiki"
@@ -40,6 +42,7 @@ readonly NAMESPACES=(
   "cloudflared"
   "tailscale"
   "monitoring"
+  "gitea"
   "gitea"
   "monitoring"
   "homepage"
@@ -123,6 +126,10 @@ helm dependency update platforms/vault
 helm dependency update platforms/nginx-ingress
 helm dependency update platforms/tailscale
 helm dependency update platforms/monitoring
+helm dependency update apps/gitea-actions
+
+log "Building the wiki container image for k3s"
+bash scripts/build-wiki-image.sh
 
 log "Linting and rendering Helm charts"
 render_dir="$(mktemp -d)"
@@ -167,7 +174,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea homepage wiki; do
+for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea gitea-actions homepage wiki; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

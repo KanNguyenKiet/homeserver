@@ -10,6 +10,7 @@ platforms and applications to the cluster.
 homeserver/
 |-- apps/                            # Local Helm charts for workloads
 |   |-- gitea/                       # Self-hosted Git forge
+|   |-- gitea-actions/               # Gitea Actions CI runner
 |   |-- homepage/                    # Service dashboard
 |   |-- grafana-dashboards/          # Helm chart for dashboard ConfigMaps
 |   `-- wiki/                        # MkDocs Material documentation site
@@ -50,7 +51,8 @@ git pull --ff-only origin master
 bash deploy.sh
 ```
 
-The script requires `git`, `helm`, and `kubectl`. Vault operations additionally require
+The script requires `git`, `helm`, `kubectl`, and `docker`. The wiki image is built on
+the server and imported into k3s before Argo CD syncs. Vault operations additionally require
 `jq`. The script refuses to run with local changes,
 deploys the currently checked-out local `master` commit, builds and validates every
 Helm chart, updates Argo CD, applies the root Application, and waits for all child
@@ -79,7 +81,7 @@ its `application.yaml` beside `Chart.yaml`. The upstream chart is declared as a
 dependency in `Chart.yaml` and downloaded during the dependency build. Generated
 `Chart.lock` and `charts/*.tgz` files are ignored and are not committed.
 
-Cloudflared, Gitea, Homepage, and Wiki are local Helm charts. Argo CD renders these
+Cloudflared, Gitea, Gitea Actions, Homepage, and Wiki are local Helm charts. Argo CD renders these
 charts directly from Git. Each application's configuration is stored in its
 corresponding `values.yaml` file.
 
@@ -89,10 +91,10 @@ corresponding `values.yaml` file.
 - To change platform configuration, edit `platforms/<platform>/values.yaml`.
 - To change Grafana ingress, retention, or resource limits, edit
   `platforms/monitoring/values.yaml`.
-- To change Gitea, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
-- To change Wiki content, edit the Markdown files in `apps/wiki/docs/` and push to
-  `master`. GitHub Actions builds a container image and updates the tag in
-  `apps/wiki/values.yaml`.
+- To change Gitea, Gitea Actions, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
+- To change Wiki content, edit the Markdown files in `apps/wiki/docs/`, push to
+  `master`, then run `bash deploy.sh` on the server. The script builds the wiki
+  image locally and Argo CD rolls the Deployment when the content checksum changes.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
 - To change Tailscale routes, tags, or connector settings, edit
@@ -224,6 +226,40 @@ Verify Gitea can connect from inside Kubernetes:
 kubectl -n gitea run pg-test --rm -it --restart=Never --image=postgres:16 -- \
   psql -h 192.168.1.10 -U gitea -d gitea -W -c 'select 1;'
 kubectl -n gitea rollout status deployment/gitea
+```
+
+## Gitea Actions runner
+
+Gitea Actions must be enabled on the Gitea Deployment and a runner registration token
+must exist in Vault before the runner StatefulSet can register. The runner uses
+Docker-in-Docker inside Kubernetes and connects to Gitea over the in-cluster Service
+URL.
+
+Generate an instance-level registration token in the Gitea admin UI at
+`https://git.huukiet.com/-/admin/actions/runners`, or from the Gitea Pod:
+
+```bash
+kubectl -n gitea exec deploy/gitea -- gitea actions generate-runner-token
+```
+
+Store the token in Vault and wait for External Secrets to sync
+`gitea/gitea-actions-token`:
+
+```bash
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/gitea-actions \
+  -set-prompt registrationToken \
+  -policy gitea-actions-read -role gitea-actions \
+  -bound-sa gitea-actions-vault-auth -bound-namespace gitea \
+  -wait-externalsecret gitea-actions-token -app-namespace gitea
+```
+
+Verify the runner after deploying:
+
+```bash
+kubectl -n gitea get externalsecret gitea-actions-token
+kubectl -n gitea rollout status statefulset/gitea-actions-runner
+kubectl -n gitea get pods -l app.kubernetes.io/name=actions-runner
 ```
 
 Back up PostgreSQL outside Kubernetes. A simple starting point is a nightly

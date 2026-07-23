@@ -11,6 +11,8 @@ spec:
       {{- include "wiki.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      annotations:
+        checksum/content: {{ include "wiki.contentChecksum" . }}
       labels:
         {{- include "wiki.selectorLabels" . | nindent 8 }}
     spec:
