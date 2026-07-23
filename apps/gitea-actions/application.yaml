@@ -7,6 +7,7 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: "15"
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: default
   source:
@@ -18,6 +19,19 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: gitea
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: gitea-actions-runner
+      jqPathExpressions:
+        # DinD runs as a native sidecar initContainer on Kubernetes 1.29+.
+        - .spec.template.spec.initContainers[]?.restartPolicy
+        # The API server populates these on volumeClaimTemplates after apply.
+        - .spec.volumeClaimTemplates[]?.apiVersion
+        - .spec.volumeClaimTemplates[]?.kind
+        - .spec.volumeClaimTemplates[]?.status
+      jsonPointers:
+        - /spec/persistentVolumeClaimRetentionPolicy
   syncPolicy:
     automated:
       prune: true
