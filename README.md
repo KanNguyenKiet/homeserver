@@ -20,7 +20,7 @@ homeserver/
 |   |-- cloudflared/                 # Cloudflare Tunnel connector Helm chart
 |   |-- external-secrets/            # External Secrets wrapper Helm chart
 |   |-- nginx-ingress/               # ingress-nginx wrapper Helm chart
-|   |-- monitoring/                  # Prometheus and Grafana monitoring stack
+|   |-- monitoring/                  # Prometheus, Grafana, Loki, and Alloy stack
 |   |-- tailscale/                   # Tailscale Operator and subnet connector
 |   `-- vault/                       # HashiCorp Vault wrapper Helm chart
 |-- scripts/                         # Vault bootstrap and unseal operations
@@ -590,12 +590,17 @@ The host's old `100.x` Tailscale address stops working when its daemon is disabl
 Use the routed LAN address (`192.168.1.10` in this repository) instead. The Connector
 has its own tailnet identity and does not inherit the host daemon's identity or IP.
 
-## Grafana and Prometheus
+## Grafana, Prometheus, and Loki
 
 The monitoring stack runs in the `monitoring` namespace through the upstream
-`kube-prometheus-stack` chart. It deploys Grafana, Prometheus, Alertmanager,
-node-exporter, and kube-state-metrics with the default Kubernetes and node
-dashboards enabled.
+`kube-prometheus-stack` chart plus Loki and Grafana Alloy. It deploys Grafana,
+Prometheus, Alertmanager, Loki, Alloy, node-exporter, and kube-state-metrics
+with the default Kubernetes and node dashboards enabled.
+
+Grafana Alloy runs as a DaemonSet on each node and tails pod logs through the
+Kubernetes API, then forwards them to Loki. Loki runs in monolithic mode with a
+14-day retention window and stores chunks in the bundled MinIO subchart for now.
+Grafana is preconfigured with a Loki data source alongside Prometheus.
 
 Grafana is exposed at `https://grafana.huukiet.com` through the nginx Ingress.
 Prometheus and Alertmanager remain internal ClusterIP services. Admin credentials
@@ -628,7 +633,19 @@ kubectl -n monitoring get pods
 
 Open `https://grafana.huukiet.com` after Cloudflare routes the hostname to
 `http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80`. Prometheus
-is preconfigured as the default Grafana data source.
+is preconfigured as the default Grafana data source. Open **Explore**, choose
+**Loki**, and query logs with LogQL, for example `{namespace="gitea"}`.
+
+Verify Loki and Alloy after sync:
+
+```bash
+kubectl -n monitoring rollout status statefulset/kube-prometheus-stack-loki
+kubectl -n monitoring rollout status daemonset/kube-prometheus-stack-alloy
+kubectl -n monitoring get pods -l 'app.kubernetes.io/name in (loki,alloy)'
+```
+
+To change Loki retention, storage size, or Alloy resource limits, edit
+`platforms/monitoring/values.yaml`.
 
 ### Dashboard Git sync
 
