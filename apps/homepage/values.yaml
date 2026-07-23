@@ -99,7 +99,7 @@ config:
             href: https://git.huukiet.com
             description: Git forge
         - Argo CD:
-            icon: argocd.svg
+            icon: argo-cd.svg
             href: https://argocd.huukiet.com
             description: Continuous deployment
         - Wiki:
