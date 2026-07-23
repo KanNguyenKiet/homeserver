@@ -52,8 +52,8 @@ bash deploy.sh
 ```
 
 The script requires `git`, `helm`, `kubectl`, and `docker`. The wiki image is built on
-the server and imported into k3s before Argo CD syncs. Vault operations additionally require
-`jq`. The script refuses to run with local changes,
+the server, pushed to the Gitea container registry, and pulled by Kubernetes during
+rollout. Vault operations additionally require `jq`. The script refuses to run with local changes,
 deploys the currently checked-out local `master` commit, builds and validates every
 Helm chart, updates Argo CD, applies the root Application, and waits for all child
 Applications to sync to that commit. Pull changes manually before running the script.
@@ -94,7 +94,8 @@ corresponding `values.yaml` file.
 - To change Gitea, Gitea Actions, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
 - To change Wiki content, edit the Markdown files in `apps/wiki/docs/`, push to
   `master`, then run `bash deploy.sh` on the server. The script builds the wiki
-  image locally and Argo CD rolls the Deployment when the content checksum changes.
+  image, pushes it to the Gitea container registry, and Argo CD rolls the
+  Deployment when the content checksum changes.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
 - To change Tailscale routes, tags, or connector settings, edit
@@ -265,6 +266,51 @@ kubectl -n gitea get pods -l app.kubernetes.io/name=actions-runner
 Back up PostgreSQL outside Kubernetes. A simple starting point is a nightly
 `pg_dump -Fc` for each application database plus `pg_dumpall --globals-only`, stored
 off the server or on a separate encrypted disk.
+
+## Wiki container registry
+
+Gitea serves the OCI container registry on the same hostname as the Git forge
+(`https://git.huukiet.com`). Packages are enabled in `apps/gitea/values.yaml`, and
+the nginx Ingress allows large layer uploads.
+
+The wiki image is published to `git.huukiet.com/ops/homeserver-wiki`. Kubernetes
+pulls it through an `imagePullSecret` synced from Vault. The server build host
+needs credentials with `write:package` to push during `deploy.sh`.
+
+Create a Gitea personal access token with at least `read:package` and
+`write:package`, then store the pull credentials in Vault:
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/wiki \
+  -set-prompt registryUsername -set-prompt registryPassword \
+  -policy wiki-registry-read -role wiki \
+  -bound-sa wiki-vault-auth -bound-namespace wiki \
+  -wait-externalsecret gitea-registry -app-namespace wiki
+```
+
+Use the Gitea username for `registryUsername` and the personal access token for
+`registryPassword`.
+
+On the server, authenticate Docker for pushes before the first wiki build:
+
+```bash
+docker login git.huukiet.com
+```
+
+Alternatively, export `GITEA_REGISTRY_USER` and `GITEA_REGISTRY_TOKEN` in the shell
+that runs `deploy.sh`.
+
+Verify the registry integration:
+
+```bash
+kubectl -n wiki get secretstore,externalsecret
+kubectl -n wiki rollout status deployment/wiki
+docker pull git.huukiet.com/ops/homeserver-wiki:latest
+```
 
 ## Argo CD GitHub login
 

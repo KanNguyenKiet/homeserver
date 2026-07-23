@@ -20,7 +20,9 @@ service:
 ingress:
   enabled: true
   className: nginx
-  annotations: {}
+  annotations:
+    # Container layer uploads can be large.
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
   host: git.huukiet.com
   path: /
   pathType: Prefix
@@ -37,6 +39,8 @@ persistence:
 gitea:
   rootUrl: https://git.huukiet.com
   actions:
+    enabled: true
+  packages:
     enabled: true
   database:
     type: postgres

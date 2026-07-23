@@ -128,7 +128,7 @@ helm dependency update platforms/tailscale
 helm dependency update platforms/monitoring
 helm dependency update apps/gitea-actions
 
-log "Building the wiki container image for k3s"
+log "Building and pushing the wiki container image to Gitea"
 bash scripts/build-wiki-image.sh
 
 log "Linting and rendering Helm charts"

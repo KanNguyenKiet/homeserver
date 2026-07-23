@@ -16,4 +16,5 @@ explains why I built it this way and how the pieces fit together.
 | Apps | Gitea, Homepage, Wiki |
 
 Content is versioned in Git under `apps/wiki/docs/`. After you push to `master`, run
-`bash deploy.sh` on the server to build the container image and sync it through Argo CD.
+`bash deploy.sh` on the server to build the container image, push it to the Gitea
+registry, and sync through Argo CD.

@@ -59,6 +59,8 @@ spec:
                   key: ROOT_URL
             - name: GITEA__actions__ENABLED
               value: {{ .Values.gitea.actions.enabled | quote }}
+            - name: GITEA__packages__ENABLED
+              value: {{ .Values.gitea.packages.enabled | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
