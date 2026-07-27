@@ -128,9 +128,6 @@ helm dependency update platforms/tailscale
 helm dependency update platforms/monitoring
 helm dependency update apps/gitea-actions
 
-log "Building and pushing the wiki container image to Gitea"
-bash scripts/build-wiki-image.sh
-
 log "Linting and rendering Helm charts"
 render_dir="$(mktemp -d)"
 trap 'rm -rf -- "$render_dir"' EXIT

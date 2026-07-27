@@ -3,8 +3,8 @@ replicaCount: 1
 image:
   registryHost: git.huukiet.com
   repository: git.huukiet.com/ops/homeserver-wiki
-  tag: latest
-  pullPolicy: Always
+  tag: d94b1279d3b0be14e779f15e3bd165309f5a9002
+  pullPolicy: IfNotPresent
 
 imagePullSecrets:
   - name: gitea-registry

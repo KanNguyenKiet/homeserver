@@ -51,9 +51,9 @@ git pull --ff-only origin master
 bash deploy.sh
 ```
 
-The script requires `git`, `helm`, `kubectl`, and `docker`. The wiki image is built on
-the server, pushed to the Gitea container registry, and pulled by Kubernetes during
-rollout. Vault operations additionally require `jq`. The script refuses to run with local changes,
+The script requires `git`, `helm`, and `kubectl`. Wiki images are built by Gitea Actions;
+Argo CD rolls out when `apps/wiki/values.yaml` image tag changes. Vault operations
+additionally require `jq`. The script refuses to run with local changes,
 deploys the currently checked-out local `master` commit, builds and validates every
 Helm chart, updates Argo CD, applies the root Application, and waits for all child
 Applications to sync to that commit. Pull changes manually before running the script.
@@ -92,10 +92,9 @@ corresponding `values.yaml` file.
 - To change Grafana ingress, retention, or resource limits, edit
   `platforms/monitoring/values.yaml`.
 - To change Gitea, Gitea Actions, Homepage, or Wiki configuration, edit `apps/<app>/values.yaml`.
-- To change Wiki content, edit the Markdown files in `apps/wiki/docs/`, push to
-  `master`, then run `bash deploy.sh` on the server. The script builds the wiki
-  image, pushes it to the Gitea container registry, and Argo CD rolls the
-  Deployment when the content checksum changes.
+- To change Wiki content, edit the Markdown files in `apps/wiki/docs/` and push to
+  `master`. Gitea Actions builds the image, tags it with the commit SHA, updates
+  `apps/wiki/values.yaml`, and pushes to GitHub. Argo CD syncs the new tag automatically.
 - To change the Cloudflare connector configuration, edit
   `platforms/cloudflared/values.yaml`.
 - To change Tailscale routes, tags, or connector settings, edit
@@ -273,16 +272,18 @@ Gitea serves the OCI container registry on the same hostname as the Git forge
 (`https://git.huukiet.com`). Packages are enabled in `apps/gitea/values.yaml`, and
 the nginx Ingress allows large layer uploads.
 
-The wiki image is published to `git.huukiet.com/ops/homeserver-wiki`. Kubernetes
-pulls it through an `imagePullSecret` synced from Vault. The server build host
-needs credentials with `write:package` to push during `deploy.sh`.
+The wiki image is published to `git.huukiet.com/ops/homeserver-wiki:<commit-sha>`.
+Each content change triggers `.gitea/workflows/wiki.yml`, which builds and pushes
+the image, commits the new tag to `apps/wiki/values.yaml`, and pushes to GitHub for
+Argo CD. The workflow does not use `:latest`.
 
-Create a Gitea personal access token with at least `read:package` and
-`write:package`, then store the pull credentials in Vault:
+### One-time setup
+
+**1. Vault pull credentials** — so the wiki Pod can pull from the private registry:
 
 ```bash
-git pull --ff-only origin master
-bash deploy.sh
+unset VAULT_ROOT_TOKEN
+export VAULT_ROOT_TOKEN="$(jq -r .root_token /var/lib/vault-bootstrap/vault-init.json)"
 
 scripts/vaultsecret/vaultsecret \
   -path homeserver/wiki \
@@ -292,24 +293,38 @@ scripts/vaultsecret/vaultsecret \
   -wait-externalsecret gitea-registry -app-namespace wiki
 ```
 
-Use the Gitea username for `registryUsername` and the personal access token for
-`registryPassword`.
+Use the Gitea bot username for `registryUsername` and its personal access token for
+`registryPassword` (`read:package` scope).
 
-On the server, authenticate Docker for pushes before the first wiki build:
+**2. Gitea org secrets** — under **ops → Settings → Secrets**:
 
-```bash
-docker login git.huukiet.com
-```
+| Secret | Value |
+| --- | --- |
+| `REGISTRY_USER` | Gitea bot username (e.g. `actions-bot`) |
+| `REGISTRY_TOKEN` | PAT with `read:package` and `write:package` |
+| `GITHUB_PUSH_TOKEN` | GitHub PAT with `contents:write` on `KanNguyenKiet/homeserver` |
 
-Alternatively, export `GITEA_REGISTRY_USER` and `GITEA_REGISTRY_TOKEN` in the shell
-that runs `deploy.sh`.
+Argo CD reads from GitHub, so the workflow pushes the tag update there. Gitea is
+updated as a mirror in the same workflow step.
 
-Verify the registry integration:
+**3. Bootstrap the first image** — run the workflow once from the Gitea UI
+(**Actions → Build and publish wiki image → Run workflow**) or push a wiki content
+change to `master`.
+
+### Verify
 
 ```bash
 kubectl -n wiki get secretstore,externalsecret
 kubectl -n wiki rollout status deployment/wiki
-docker pull git.huukiet.com/ops/homeserver-wiki:latest
+docker pull git.huukiet.com/ops/homeserver-wiki:<commit-sha>
+```
+
+### Manual image build (fallback)
+
+```bash
+docker login git.huukiet.com
+bash scripts/build-wiki-image.sh
+# Then update apps/wiki/values.yaml tag and push to GitHub
 ```
 
 ## Argo CD GitHub login

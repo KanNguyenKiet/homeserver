@@ -7,7 +7,7 @@ readonly WIKI_DIR="${REPO_DIR}/apps/wiki"
 readonly REGISTRY_HOST="${WIKI_REGISTRY_HOST:-git.huukiet.com}"
 readonly IMAGE_OWNER="${WIKI_IMAGE_OWNER:-ops}"
 readonly IMAGE_NAME="${WIKI_IMAGE_NAME:-homeserver-wiki}"
-readonly IMAGE_TAG="${WIKI_IMAGE_TAG:-latest}"
+readonly IMAGE_TAG="${WIKI_IMAGE_TAG:-$(git -C "$REPO_DIR" rev-parse HEAD)}"
 readonly IMAGE="${REGISTRY_HOST}/${IMAGE_OWNER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 log() {
@@ -41,26 +41,15 @@ registry_login() {
 
 require_command docker
 [[ -d "$WIKI_DIR" ]] || fail "Wiki chart directory not found: $WIKI_DIR"
+[[ -n "$IMAGE_TAG" ]] || fail "WIKI_IMAGE_TAG is empty"
 
 log "Building ${IMAGE} from ${WIKI_DIR}"
 docker build -t "${IMAGE}" "$WIKI_DIR"
-
-if git -C "$REPO_DIR" rev-parse --short HEAD >/dev/null 2>&1; then
-  readonly SHA_TAG="$(git -C "$REPO_DIR" rev-parse --short HEAD)"
-  log "Tagging ${REGISTRY_HOST}/${IMAGE_OWNER}/${IMAGE_NAME}:${SHA_TAG}"
-  docker tag "${IMAGE}" "${REGISTRY_HOST}/${IMAGE_OWNER}/${IMAGE_NAME}:${SHA_TAG}"
-else
-  readonly SHA_TAG=""
-fi
 
 registry_login
 
 log "Pushing ${IMAGE}"
 docker push "${IMAGE}"
 
-if [[ -n "$SHA_TAG" ]]; then
-  log "Pushing ${REGISTRY_HOST}/${IMAGE_OWNER}/${IMAGE_NAME}:${SHA_TAG}"
-  docker push "${REGISTRY_HOST}/${IMAGE_OWNER}/${IMAGE_NAME}:${SHA_TAG}"
-fi
-
 log "Wiki image ready: ${IMAGE}"
+log "Update apps/wiki/values.yaml tag to ${IMAGE_TAG} and push for Argo CD to roll out"

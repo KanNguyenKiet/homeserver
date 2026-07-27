@@ -15,6 +15,6 @@ explains why I built it this way and how the pieces fit together.
 | Platform | Argo CD, Vault, External Secrets, ingress-nginx, cloudflared, Tailscale |
 | Apps | Gitea, Homepage, Wiki |
 
-Content is versioned in Git under `apps/wiki/docs/`. After you push to `master`, run
-`bash deploy.sh` on the server to build the container image, push it to the Gitea
-registry, and sync through Argo CD.
+Content is versioned in Git under `apps/wiki/docs/`. After you push to `master`, Gitea
+Actions builds the container image, tags it with the commit SHA, updates
+`apps/wiki/values.yaml`, and Argo CD syncs the new tag.

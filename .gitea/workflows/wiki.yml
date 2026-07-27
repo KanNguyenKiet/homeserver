@@ -1,0 +1,54 @@
+name: Build and publish wiki image
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - apps/wiki/docs/**
+      - apps/wiki/Dockerfile
+      - apps/wiki/mkdocs.yml
+      - apps/wiki/nginx/**
+      - apps/wiki/requirements.txt
+      - .gitea/workflows/wiki.yml
+  workflow_dispatch:
+
+env:
+  REGISTRY_HOST: git.huukiet.com
+  IMAGE: git.huukiet.com/ops/homeserver-wiki
+  VALUES_FILE: apps/wiki/values.yaml
+  GITHUB_REPO: KanNguyenKiet/homeserver
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to Gitea registry
+        run: |
+          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login "${{ env.REGISTRY_HOST }}" \
+            -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build -t "${{ env.IMAGE }}:${{ gitea.sha }}" apps/wiki
+          docker push "${{ env.IMAGE }}:${{ gitea.sha }}"
+
+      - name: Update image tag in Git
+        run: |
+          git config user.name "actions-bot"
+          git config user.email "actions-bot@localhost"
+          sed -i "s/^  tag: .*/  tag: ${{ gitea.sha }}/" "${{ env.VALUES_FILE }}"
+          git add "${{ env.VALUES_FILE }}"
+          git diff --staged --quiet && exit 0
+          git commit -m "Update wiki image tag to ${{ gitea.sha }}"
+
+      - name: Push to GitHub for Argo CD
+        run: |
+          git push "https://x-access-token:${{ secrets.GITHUB_PUSH_TOKEN }}@github.com/${{ env.GITHUB_REPO }}.git" HEAD:master
+
+      - name: Push to Gitea mirror
+        run: |
+          git push "https://oauth2:${{ gitea.token }}@${{ env.REGISTRY_HOST }}/${{ gitea.repository }}.git" HEAD:master
