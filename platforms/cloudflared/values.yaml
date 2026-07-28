@@ -12,24 +12,6 @@ tunnelToken:
   existingSecret: cloudflared-token
   key: token
 
-externalSecret:
-  enabled: true
-  refreshInterval: 1h
-  secretStore:
-    name: vault-backend
-    server: http://vault.vault.svc.cluster.local:8200
-    path: kv
-    version: v2
-  auth:
-    mountPath: kubernetes
-    role: cloudflared
-    serviceAccountName: cloudflared-vault-auth
-    audiences:
-      - vault
-  remoteRef:
-    key: homeserver/cloudflared
-    property: token
-
 logLevel: info
 
 metrics:

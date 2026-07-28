@@ -1,0 +1,122 @@
+clusterSecretStore:
+  name: homeserver-vault
+
+clusterExternalSecrets:
+  refreshTime: 1m
+  defaultRefreshInterval: 1h
+
+vault:
+  server: http://vault.vault.svc.cluster.local:8200
+  path: kv
+  version: v2
+  auth:
+    serviceAccountName: cluster-secrets-vault-auth
+    mountPath: kubernetes
+    role: cluster-secrets
+    audiences:
+      - vault
+
+registry:
+  host: git.huukiet.com
+
+# ClusterExternalSecret definitions. Apps only reference the target secret name.
+secrets:
+  - name: gitea-secret
+    namespaces:
+      - gitea
+    data:
+      - secretKey: DB_NAME
+        remoteRef:
+          key: homeserver/gitea
+          property: dbName
+      - secretKey: DB_USER
+        remoteRef:
+          key: homeserver/gitea
+          property: dbUser
+      - secretKey: DB_PASS
+        remoteRef:
+          key: homeserver/gitea
+          property: dbPassword
+
+  - name: gitea-actions-token
+    namespaces:
+      - gitea
+    data:
+      - secretKey: token
+        remoteRef:
+          key: homeserver/gitea-actions
+          property: registrationToken
+
+  - name: gitea-registry
+    dockerConfigJson: true
+    namespaceSelectors:
+      - matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: NotIn
+            values:
+              - kube-system
+              - kube-public
+              - kube-node-lease
+    data:
+      - secretKey: registryUsername
+        remoteRef:
+          key: homeserver/registry
+          property: registryUsername
+      - secretKey: registryPassword
+        remoteRef:
+          key: homeserver/registry
+          property: registryPassword
+
+  - name: grafana-admin
+    namespaces:
+      - monitoring
+    data:
+      - secretKey: admin-user
+        remoteRef:
+          key: homeserver/grafana
+          property: adminUser
+      - secretKey: admin-password
+        remoteRef:
+          key: homeserver/grafana
+          property: adminPassword
+
+  - name: cloudflared-token
+    namespaces:
+      - cloudflared
+    data:
+      - secretKey: token
+        remoteRef:
+          key: homeserver/cloudflared
+          property: token
+
+  - name: operator-oauth
+    namespaces:
+      - tailscale
+    data:
+      - secretKey: clientId
+        remoteRef:
+          key: homeserver/tailscale
+          property: clientId
+      - secretKey: clientSecret
+        remoteRef:
+          key: homeserver/tailscale
+          property: clientSecret
+
+  - name: argocd-github-oauth
+    namespaces:
+      - argocd
+    targetTemplate:
+      engineVersion: v2
+      mergePolicy: Replace
+      metadata:
+        labels:
+          app.kubernetes.io/part-of: argocd
+    data:
+      - secretKey: clientID
+        remoteRef:
+          key: homeserver/argocd
+          property: githubClientID
+      - secretKey: clientSecret
+        remoteRef:
+          key: homeserver/argocd
+          property: githubClientSecret

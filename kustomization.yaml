@@ -4,6 +4,7 @@ resources:
   - root-application.yaml
   - platforms/external-secrets/application.yaml
   - platforms/vault/application.yaml
+  - platforms/cluster-secrets/application.yaml
   - platforms/nginx-ingress/application.yaml
   - platforms/cloudflared/application.yaml
   - platforms/tailscale/application.yaml

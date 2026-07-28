@@ -25,26 +25,6 @@ ingress:
   pathType: Prefix
   tls: []
 
-externalSecret:
-  enabled: true
-  refreshInterval: 1h
-  secretName: gitea-registry
-  secretStore:
-    name: wiki-vault-backend
-    server: http://vault.vault.svc.cluster.local:8200
-    path: kv
-    version: v2
-  auth:
-    serviceAccountName: wiki-vault-auth
-    mountPath: kubernetes
-    role: wiki
-    audiences:
-      - vault
-  remoteRef:
-    key: homeserver/wiki
-    registryUsernameProperty: registryUsername
-    registryPasswordProperty: registryPassword
-
 podSecurityContext:
   fsGroup: 101
   runAsNonRoot: true

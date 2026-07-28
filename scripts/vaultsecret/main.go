@@ -158,8 +158,8 @@ used to hand-roll per integration. Vault is only ever reached through
 Usage:
   vaultsecret -path homeserver/gitea \
     -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
-    -policy gitea-db-read -role gitea \
-    -bound-sa gitea-vault-auth -bound-namespace gitea \
+    -policy cluster-secrets-read -role cluster-secrets \
+    -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
     -wait-externalsecret gitea-secret -app-namespace gitea
 
 Flags:

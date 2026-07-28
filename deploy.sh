@@ -10,6 +10,7 @@ readonly KUBECTL_TIMEOUT="${DEPLOY_TIMEOUT_SECONDS}s"
 readonly CHARTS=(
   "platforms/external-secrets"
   "platforms/vault"
+  "platforms/cluster-secrets"
   "platforms/nginx-ingress"
   "platforms/cloudflared"
   "platforms/tailscale"
@@ -24,6 +25,7 @@ readonly CHARTS=(
 readonly RELEASES=(
   "external-secrets"
   "vault"
+  "cluster-secrets"
   "ingress-nginx"
   "cloudflared"
   "tailscale"
@@ -38,6 +40,7 @@ readonly RELEASES=(
 readonly NAMESPACES=(
   "external-secrets"
   "vault"
+  "external-secrets"
   "ingress-nginx"
   "cloudflared"
   "tailscale"
@@ -171,7 +174,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea gitea-actions homepage wiki; do
+for application in argocd-config external-secrets vault cluster-secrets nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea gitea-actions homepage wiki; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

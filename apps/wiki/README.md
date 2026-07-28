@@ -31,8 +31,8 @@ it; Argo CD deploys the tag pinned in `values.yaml`.
 The workflow only runs when wiki source files change, not when only the image tag in
 `values.yaml` is updated (avoids infinite loops).
 
-Before the first deploy, store Gitea registry pull credentials in Vault — see the
-repository README **Wiki container registry** section.
+Before the first deploy, store Gitea registry pull credentials in Vault — see
+the repository README **Cluster secrets** section.
 
 ## Manual image build
 

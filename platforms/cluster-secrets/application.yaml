@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-secrets
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # After app charts drop their per-namespace ExternalSecrets (waves -5..15).
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KanNguyenKiet/homeserver.git
+    targetRevision: master
+    path: platforms/cluster-secrets
+    helm:
+      releaseName: cluster-secrets
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

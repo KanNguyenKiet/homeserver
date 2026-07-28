@@ -19,6 +19,7 @@ homeserver/
 |   |   `-- config/                  # Argo CD configuration managed through GitOps
 |   |-- cloudflared/                 # Cloudflare Tunnel connector Helm chart
 |   |-- external-secrets/            # External Secrets wrapper Helm chart
+|   |-- cluster-secrets/             # Cluster-wide Vault sync for all app secrets
 |   |-- nginx-ingress/               # ingress-nginx wrapper Helm chart
 |   |-- monitoring/                  # Prometheus, Grafana, Loki, and Alloy stack
 |   |-- tailscale/                   # Tailscale Operator and subnet connector
@@ -205,18 +206,15 @@ unset GITEA_DB_PASSWORD
 ```
 
 Then write the same credentials to Vault with `vaultsecret` (see
-[Generic Vault secret helper (vaultsecret)](#generic-vault-secret-helper-vaultsecret)
-below for how to build it). This creates a Vault policy and Kubernetes auth
-role restricted to the `gitea/gitea-vault-auth` ServiceAccount, writes the
-credentials to `kv/homeserver/gitea`, and waits for External Secrets to sync
-the `gitea/gitea-secret` Secret:
+[Cluster secrets](#cluster-secrets) and
+[Generic Vault secret helper (vaultsecret)](#generic-vault-secret-helper-vaultsecret)):
 
 ```bash
 scripts/vaultsecret/vaultsecret \
   -path homeserver/gitea \
   -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
-  -policy gitea-db-read -role gitea \
-  -bound-sa gitea-vault-auth -bound-namespace gitea \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret gitea-secret -app-namespace gitea
 ```
 
@@ -249,8 +247,8 @@ Store the token in Vault and wait for External Secrets to sync
 scripts/vaultsecret/vaultsecret \
   -path homeserver/gitea-actions \
   -set-prompt registrationToken \
-  -policy gitea-actions-read -role gitea-actions \
-  -bound-sa gitea-actions-vault-auth -bound-namespace gitea \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret gitea-actions-token -app-namespace gitea
 ```
 
@@ -266,11 +264,99 @@ Back up PostgreSQL outside Kubernetes. A simple starting point is a nightly
 `pg_dump -Fc` for each application database plus `pg_dumpall --globals-only`, stored
 off the server or on a separate encrypted disk.
 
-## Wiki container registry
+## Cluster secrets
+
+All Vault → Kubernetes secret sync lives in `platforms/cluster-secrets`. One
+`ClusterSecretStore` connects to Vault; one `ClusterExternalSecret` exists per
+Kubernetes secret. App and platform charts only reference secret names — they never
+define `SecretStore` or `ExternalSecret` resources.
+
+| Kubernetes secret | Namespace(s) | Vault path |
+| --- | --- | --- |
+| `gitea-secret` | `gitea` | `homeserver/gitea` |
+| `gitea-actions-token` | `gitea` | `homeserver/gitea-actions` |
+| `gitea-registry` | all non-system | `homeserver/registry` |
+| `grafana-admin` | `monitoring` | `homeserver/grafana` |
+| `cloudflared-token` | `cloudflared` | `homeserver/cloudflared` |
+| `operator-oauth` | `tailscale` | `homeserver/tailscale` |
+| `argocd-github-oauth` | `argocd` | `homeserver/argocd` |
+
+Every `vaultsecret` invocation uses the same Vault Kubernetes auth role:
+
+```text
+-policy cluster-secrets-read -role cluster-secrets \
+-bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets
+```
+
+Verify the operator and a synced secret:
+
+```bash
+kubectl get clustersecretstore homeserver-vault
+kubectl get clusterexternalsecret
+kubectl get externalsecret -A
+kubectl -n gitea get secret gitea-secret
+```
+
+To add a new secret, append an entry to `platforms/cluster-secrets/values.yaml` and
+reference `existingSecret: <name>` (or `imagePullSecrets`) in the app chart.
+
+## Gitea container registry
 
 Gitea serves the OCI container registry on the same hostname as the Git forge
 (`https://git.huukiet.com`). Packages are enabled in `apps/gitea/values.yaml`, and
 the nginx Ingress allows large layer uploads.
+
+The cluster-wide `gitea-registry` pull secret is synced by
+`platforms/cluster-secrets`. Workloads only need:
+
+```yaml
+imagePullSecrets:
+  - name: gitea-registry
+```
+
+### One-time setup
+
+**1. Store pull credentials in Vault**
+
+Create a Gitea personal access token with at least `read:package`. Use a bot account
+(for example `actions-bot`):
+
+```bash
+unset VAULT_ROOT_TOKEN
+export VAULT_ROOT_TOKEN="$(jq -r .root_token /var/lib/vault-bootstrap/vault-init.json)"
+
+scripts/vaultsecret/vaultsecret \
+  -path homeserver/registry \
+  -set-prompt registryUsername -set-prompt registryPassword \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets
+```
+
+Use the Gitea username for `registryUsername` and the PAT for `registryPassword`.
+
+If credentials already live at `kv/homeserver/wiki`, run the command above with the
+same username and PAT. The wiki chart no longer manages its own registry ExternalSecret.
+
+**2. Deploy the Git revision**
+
+```bash
+git pull --ff-only origin master
+bash deploy.sh
+```
+
+**3. Verify cluster-wide sync**
+
+```bash
+kubectl get clusterexternalsecret gitea-registry
+kubectl get externalsecret -A | rg gitea-registry
+kubectl -n wiki get secret gitea-registry
+kubectl -n wiki rollout status deployment/wiki
+```
+
+New namespaces (except `kube-system`, `kube-public`, and `kube-node-lease`) receive
+the secret automatically within about one minute.
+
+## Wiki container registry
 
 The wiki image is published to `git.huukiet.com/ops/homeserver-wiki:<commit-sha>`.
 Each content change triggers `.gitea/workflows/wiki.yml`, which builds and pushes
@@ -279,24 +365,7 @@ Argo CD. The workflow does not use `:latest`.
 
 ### One-time setup
 
-**1. Vault pull credentials** — so the wiki Pod can pull from the private registry:
-
-```bash
-unset VAULT_ROOT_TOKEN
-export VAULT_ROOT_TOKEN="$(jq -r .root_token /var/lib/vault-bootstrap/vault-init.json)"
-
-scripts/vaultsecret/vaultsecret \
-  -path homeserver/wiki \
-  -set-prompt registryUsername -set-prompt registryPassword \
-  -policy wiki-registry-read -role wiki \
-  -bound-sa wiki-vault-auth -bound-namespace wiki \
-  -wait-externalsecret gitea-registry -app-namespace wiki
-```
-
-Use the Gitea bot username for `registryUsername` and its personal access token for
-`registryPassword` (`read:package` scope).
-
-**2. Gitea org secrets** — under **ops → Settings → Secrets**:
+**1. Gitea org secrets** — under **ops → Settings → Secrets**:
 
 | Secret | Value |
 | --- | --- |
@@ -307,14 +376,13 @@ Use the Gitea bot username for `registryUsername` and its personal access token 
 Argo CD reads from GitHub, so the workflow pushes the tag update there. Gitea is
 updated as a mirror in the same workflow step.
 
-**3. Bootstrap the first image** — run the workflow once from the Gitea UI
+**2. Bootstrap the first image** — run the workflow once from the Gitea UI
 (**Actions → Build and publish wiki image → Run workflow**) or push a wiki content
 change to `master`.
 
 ### Verify
 
 ```bash
-kubectl -n wiki get secretstore,externalsecret
 kubectl -n wiki rollout status deployment/wiki
 docker pull git.huukiet.com/ops/homeserver-wiki:<commit-sha>
 ```
@@ -359,17 +427,14 @@ bash deploy.sh
 scripts/vaultsecret/vaultsecret \
   -path homeserver/argocd \
   -set-prompt githubClientID -set-prompt githubClientSecret \
-  -policy argocd-github-oauth-read -role argocd \
-  -bound-sa argocd-vault-auth -bound-namespace argocd \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret argocd-github-oauth -app-namespace argocd \
   -restart argocd-dex-server -restart argocd-server
 ```
 
-`vaultsecret` securely prompts for the Vault root token and both OAuth values. It
-creates a Vault policy and Kubernetes auth role restricted to the
-`argocd/argocd-vault-auth` ServiceAccount, writes the credentials to
-`kv/homeserver/argocd`, waits for External Secrets, and restarts the Argo CD server
-and Dex.
+`vaultsecret` writes the credentials to `kv/homeserver/argocd`, waits for External
+Secrets to sync `argocd/argocd-github-oauth`, and restarts the Argo CD server and Dex.
 
 Open `https://argocd.huukiet.com` and choose **Log in via GitHub**. RBAC grants
 `role:admin` only to the stable GitHub user ID `20751267` (`KanNguyenKiet`). Other
@@ -380,7 +445,6 @@ after GitHub login has been verified.
 Verify the secret integration and Dex rollout with:
 
 ```bash
-kubectl -n argocd get secretstore vault-backend
 kubectl -n argocd get externalsecret argocd-github-oauth
 kubectl -n argocd rollout status deployment/argocd-dex-server
 kubectl -n argocd rollout status deployment/argocd-server
@@ -482,16 +546,16 @@ example:
 ./vaultsecret -dry-run \
   -path homeserver/gitea \
   -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
-  -policy gitea-db-read -role gitea \
-  -bound-sa gitea-vault-auth -bound-namespace gitea \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret gitea-secret -app-namespace gitea
 ```
 
 Drop `-dry-run` to run it for real. It waits for Vault to be initialized and
 unsealed, prompts for the Vault root token (or reads `VAULT_ROOT_TOKEN` from the
 environment) and for each `-set-prompt` field, writes the policy and Kubernetes
-auth role, writes the KV v2 secret, then waits for the named
-`SecretStore`/`ExternalSecret` to sync and force-syncs it.
+auth role, writes the KV v2 secret, then waits for the named `ExternalSecret` to
+sync and force-syncs it.
 
 To update only some fields of an existing multi-field secret, such as rotating one
 credential without touching the others, add `-patch`; without it, the tool performs
@@ -503,14 +567,13 @@ and `-policy-capabilities`.
 ## Cloudflare Tunnel
 
 External Secrets authenticates to Vault with a short-lived Kubernetes ServiceAccount
-token. It reads `kv/homeserver/cloudflared`, creates the
-`cloudflared/cloudflared-token` Kubernetes Secret, and refreshes it hourly. No static
-Vault credential or Cloudflare token is stored in Git.
+External Secrets reads `kv/homeserver/cloudflared` through the cluster-wide
+`ClusterSecretStore`, creates `cloudflared/cloudflared-token`, and refreshes it
+hourly. No static Vault credential or Cloudflare token is stored in Git.
 
 Verify the integration after Vault bootstrap:
 
 ```bash
-kubectl -n cloudflared get secretstore vault-backend
 kubectl -n cloudflared get externalsecret cloudflared-token
 kubectl -n cloudflared rollout status deployment/cloudflared
 kubectl -n cloudflared get pods
@@ -604,20 +667,18 @@ bash deploy.sh
 scripts/vaultsecret/vaultsecret \
   -path homeserver/tailscale \
   -set-prompt clientId -set-prompt clientSecret \
-  -policy tailscale-oauth-read -role tailscale \
-  -bound-sa tailscale-vault-auth -bound-namespace tailscale \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret operator-oauth -app-namespace tailscale
 ```
 
-This creates a Vault policy and Kubernetes auth role restricted to the
-`tailscale/tailscale-vault-auth` ServiceAccount. External Secrets reads
-`kv/homeserver/tailscale`, creates `tailscale/operator-oauth`, and refreshes it hourly.
-No Tailscale OAuth credential is stored in Git.
+External Secrets reads `kv/homeserver/tailscale`, creates `tailscale/operator-oauth`,
+and refreshes it hourly. No Tailscale OAuth credential is stored in Git.
 
 Verify the deployment and advertised routes:
 
 ```bash
-kubectl -n tailscale get secretstore,externalsecret
+kubectl -n tailscale get externalsecret operator-oauth
 kubectl -n tailscale rollout status deployment/operator
 kubectl get connector homeserver
 kubectl -n tailscale get pods
@@ -677,8 +738,8 @@ bash deploy.sh
 scripts/vaultsecret/vaultsecret \
   -path homeserver/grafana \
   -set-prompt adminUser -set-prompt adminPassword \
-  -policy grafana-admin-read -role grafana \
-  -bound-sa grafana-vault-auth -bound-namespace monitoring \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret grafana-admin -app-namespace monitoring \
   -restart kube-prometheus-stack-grafana
 ```
@@ -687,7 +748,7 @@ Use any username for `adminUser`; Grafana reads it from the synced Secret. Verif
 the deployment with:
 
 ```bash
-kubectl -n monitoring get secretstore,externalsecret
+kubectl -n monitoring get externalsecret grafana-admin
 kubectl -n monitoring rollout status deployment/kube-prometheus-stack-grafana
 kubectl -n monitoring get pods
 ```

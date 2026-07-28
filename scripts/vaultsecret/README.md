@@ -36,8 +36,8 @@ example, this writes Gitea's database credentials (see the top-level
 ./vaultsecret -dry-run \
   -path homeserver/gitea \
   -set-prompt dbName -set-prompt dbUser -set-prompt dbPassword \
-  -policy gitea-db-read -role gitea \
-  -bound-sa gitea-vault-auth -bound-namespace gitea \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret gitea-secret -app-namespace gitea
 ```
 
@@ -45,7 +45,7 @@ Drop `-dry-run` to run it for real. It waits for Vault to be initialized and
 unsealed, prompts for the Vault root token (or reads `VAULT_ROOT_TOKEN` from
 the environment) and for each `-set-prompt` field, writes the policy and
 Kubernetes auth role, writes the KV v2 secret, then waits for the named
-`SecretStore`/`ExternalSecret` to sync and force-syncs it.
+`ExternalSecret` to sync and force-syncs it.
 
 To update only some fields of an existing multi-field secret, such as
 rotating one credential without touching the others, add `-patch`; without
