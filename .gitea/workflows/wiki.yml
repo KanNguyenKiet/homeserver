@@ -51,6 +51,22 @@ jobs:
           REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         run: |
+          REGISTRY_USER="$(printf '%s' "${REGISTRY_USER}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          REGISTRY_TOKEN="$(printf '%s' "${REGISTRY_TOKEN}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          http_code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -u "${REGISTRY_USER}:${REGISTRY_TOKEN}" \
+            "https://${{ env.REGISTRY_HOST }}/v2/")"
+          if [[ "${http_code}" != "200" ]]; then
+            printf 'Registry auth check failed (HTTP %s).\n' "${http_code}"
+            printf '%s\n' \
+              'Verify org secrets at https://git.huukiet.com/ops/-/settings/actions/secrets:' \
+              '  REGISTRY_USER  — exact Gitea username that owns the PAT' \
+              '  REGISTRY_TOKEN — PAT with read:package and write:package (not the runner token)' \
+              'Do not use your account password; create a new PAT if scopes were wrong.'
+            exit 1
+          fi
+
           printf '%s' "${REGISTRY_TOKEN}" | docker login "${{ env.REGISTRY_HOST }}" \
             -u "${REGISTRY_USER}" --password-stdin
 
