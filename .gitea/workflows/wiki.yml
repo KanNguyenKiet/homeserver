@@ -26,10 +26,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Log in to Gitea registry
+      - name: Verify required secrets
+        env:
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          GITHUB_PUSH_TOKEN: ${{ secrets.GITHUB_PUSH_TOKEN }}
         run: |
-          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login "${{ env.REGISTRY_HOST }}" \
-            -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+          missing=()
+          [[ -z "${REGISTRY_USER}" ]] && missing+=("REGISTRY_USER")
+          [[ -z "${REGISTRY_TOKEN}" ]] && missing+=("REGISTRY_TOKEN")
+          [[ -z "${GITHUB_PUSH_TOKEN}" ]] && missing+=("GITHUB_PUSH_TOKEN")
+
+          if ((${#missing[@]})); then
+            printf 'Missing required Actions secrets: %s\n' "${missing[*]}"
+            printf '%s\n' \
+              'Add them under ops → Settings → Actions → Secrets:' \
+              '  https://git.huukiet.com/ops/-/settings/actions/secrets' \
+              '' \
+              '  REGISTRY_USER      — Gitea bot username (e.g. actions-bot)' \
+              '  REGISTRY_TOKEN     — PAT with read:package and write:package' \
+              '  GITHUB_PUSH_TOKEN  — GitHub PAT with contents:write on this repository'
+            exit 1
+          fi
+
+      - name: Log in to Gitea registry
+        env:
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          printf '%s' "${REGISTRY_TOKEN}" | docker login "${{ env.REGISTRY_HOST }}" \
+            -u "${REGISTRY_USER}" --password-stdin
 
       - name: Build and push image
         run: |
@@ -46,8 +72,10 @@ jobs:
           git commit -m "Update wiki image tag to ${{ gitea.sha }}"
 
       - name: Push to GitHub for Argo CD
+        env:
+          GITHUB_PUSH_TOKEN: ${{ secrets.GITHUB_PUSH_TOKEN }}
         run: |
-          git push "https://x-access-token:${{ secrets.GITHUB_PUSH_TOKEN }}@github.com/${{ env.GITHUB_REPO }}.git" HEAD:master
+          git push "https://x-access-token:${GITHUB_PUSH_TOKEN}@github.com/${{ env.GITHUB_REPO }}.git" HEAD:master
 
       - name: Push to Gitea mirror
         run: |
