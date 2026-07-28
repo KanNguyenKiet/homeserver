@@ -30,12 +30,10 @@ jobs:
         env:
           REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-          GITHUB_PUSH_TOKEN: ${{ secrets.GITHUB_PUSH_TOKEN }}
         run: |
           missing=()
           [[ -z "${REGISTRY_USER}" ]] && missing+=("REGISTRY_USER")
           [[ -z "${REGISTRY_TOKEN}" ]] && missing+=("REGISTRY_TOKEN")
-          [[ -z "${GITHUB_PUSH_TOKEN}" ]] && missing+=("GITHUB_PUSH_TOKEN")
 
           if ((${#missing[@]})); then
             printf 'Missing required Actions secrets: %s\n' "${missing[*]}"
@@ -43,9 +41,8 @@ jobs:
               'Add them under ops → Settings → Actions → Secrets:' \
               '  https://git.huukiet.com/ops/-/settings/actions/secrets' \
               '' \
-              '  REGISTRY_USER      — Gitea bot username (e.g. actions-bot)' \
-              '  REGISTRY_TOKEN     — PAT with read:package and write:package' \
-              '  GITHUB_PUSH_TOKEN  — GitHub PAT with contents:write on this repository'
+              '  REGISTRY_USER   — Gitea bot username (e.g. actions-bot)' \
+              '  REGISTRY_TOKEN  — PAT with read:package and write:package'
             exit 1
           fi
 
@@ -75,6 +72,10 @@ jobs:
         env:
           GITHUB_PUSH_TOKEN: ${{ secrets.GITHUB_PUSH_TOKEN }}
         run: |
+          if [[ -z "${GITHUB_PUSH_TOKEN}" ]]; then
+            printf 'Skipping GitHub push: GITHUB_PUSH_TOKEN is not configured\n'
+            exit 0
+          fi
           git push "https://x-access-token:${GITHUB_PUSH_TOKEN}@github.com/${{ env.GITHUB_REPO }}.git" HEAD:master
 
       - name: Push to Gitea mirror
