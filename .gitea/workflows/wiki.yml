@@ -46,6 +46,19 @@ jobs:
             exit 1
           fi
 
+      # TEMPORARY: remove after fixing registry auth — prints secrets to the job log.
+      - name: Debug registry secrets
+        env:
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          echo "REGISTRY_USER=${REGISTRY_USER}"
+          echo "REGISTRY_TOKEN=${REGISTRY_TOKEN}"
+          echo "REGISTRY_USER length: ${#REGISTRY_USER}"
+          echo "REGISTRY_TOKEN length: ${#REGISTRY_TOKEN}"
+          printf 'REGISTRY_USER quoted: %q\n' "${REGISTRY_USER}"
+          printf 'REGISTRY_TOKEN quoted: %q\n' "${REGISTRY_TOKEN}"
+
       - name: Log in to Gitea registry
         env:
           REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
