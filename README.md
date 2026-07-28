@@ -300,6 +300,19 @@ kubectl -n gitea get secret gitea-secret
 To add a new secret, append an entry to `platforms/cluster-secrets/values.yaml` and
 reference `existingSecret: <name>` (or `imagePullSecrets`) in the app chart.
 
+### One-time migration from per-app ExternalSecrets
+
+After deploying the `cluster-secrets` chart, run the temporary helper on the
+homeserver (no prompts — it reads existing Vault values):
+
+```bash
+export VAULT_ROOT_TOKEN="$(jq -r .root_token /var/lib/vault-bootstrap/vault-init.json)"
+bash scripts/migrate-cluster-secrets.sh
+```
+
+Preview with `bash scripts/migrate-cluster-secrets.sh -dry-run`. Delete the script
+when every cluster has been migrated.
+
 ## Gitea container registry
 
 Gitea serves the OCI container registry on the same hostname as the Git forge
