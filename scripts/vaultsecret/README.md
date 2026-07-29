@@ -92,11 +92,16 @@ them:
 ./vaultsecret \
   -path homeserver/argocd \
   -set-prompt githubClientID -set-prompt githubClientSecret \
-  -policy argocd-github-oauth-read -role argocd \
-  -bound-sa argocd-vault-auth -bound-namespace argocd \
+  -policy cluster-secrets-read -role cluster-secrets \
+  -bound-sa cluster-secrets-vault-auth -bound-namespace external-secrets \
   -wait-externalsecret argocd-github-oauth -app-namespace argocd \
   -restart argocd-dex-server -restart argocd-server
 ```
+
+When `-policy cluster-secrets-read` is used, the tool writes a wildcard policy
+(`kv/data/homeserver/*`) rather than scoping to the single `-path`. After the
+shared policy exists, prefer `-patch` without `-policy` or `-role` to rotate
+fields.
 
 Rotate a single field on an existing secret without disturbing the others:
 

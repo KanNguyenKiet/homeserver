@@ -27,7 +27,10 @@ import (
 	"strings"
 )
 
-const vaultAddr = "http://127.0.0.1:8200"
+const (
+	vaultAddr            = "http://127.0.0.1:8200"
+	clusterSecretsPolicy = "cluster-secrets-read"
+)
 
 var (
 	reFieldKey    = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
@@ -399,6 +402,16 @@ func uniqueStrings(in []string) []string {
 // already been validated against a restrictive allow-list in main(), and all
 // secret material is read from stdin at runtime via "IFS= read -r" rather
 // than being embedded in the script text.
+// policyPaths returns Vault ACL paths for a policy write. The shared
+// cluster-secrets-read policy always grants read on all homeserver secrets;
+// other policy names are scoped to the single secret path being configured.
+func policyPaths(mount, policyName, secretPath string) (dataPath, metadataPath string) {
+	if policyName == clusterSecretsPolicy {
+		return mount + "/data/homeserver/*", mount + "/metadata/homeserver/*"
+	}
+	return mount + "/data/" + secretPath, mount + "/metadata/" + secretPath
+}
+
 func buildRemoteScript(mount, secretPath string, patch bool, fields []resolvedField, policyName string, caps []string, roleName string, boundSAs, boundNamespaces multiFlag, audience string, rolePolicies []string, roleTTL string) string {
 	var sb strings.Builder
 
@@ -417,8 +430,9 @@ func buildRemoteScript(mount, secretPath string, patch bool, fields []resolvedFi
 
 	if policyName != "" {
 		capStr := formatCapabilities(caps)
-		fmt.Fprintf(&sb, "\nvault policy write %s - >/dev/null <<'POLICY'\npath \"%s/data/%s\" {\n  capabilities = %s\n}\n\npath \"%s/metadata/%s\" {\n  capabilities = %s\n}\nPOLICY\n",
-			policyName, mount, secretPath, capStr, mount, secretPath, capStr)
+		dataPath, metadataPath := policyPaths(mount, policyName, secretPath)
+		fmt.Fprintf(&sb, "\nvault policy write %s - >/dev/null <<'POLICY'\npath \"%s\" {\n  capabilities = %s\n}\n\npath \"%s\" {\n  capabilities = %s\n}\nPOLICY\n",
+			policyName, dataPath, capStr, metadataPath, capStr)
 	}
 
 	if roleName != "" {
@@ -587,8 +601,9 @@ func printPlan(mount, secretPath string, patch bool, fields []fieldSpec, policyN
 		fmt.Printf("    - %s  (source: %s)\n", f.key, f.tag)
 	}
 	if policyName != "" {
-		fmt.Printf("  policy:   %s  capabilities=%s on %s/data/%s and %s/metadata/%s\n",
-			policyName, formatCapabilities(caps), mount, secretPath, mount, secretPath)
+		dataPath, metadataPath := policyPaths(mount, policyName, secretPath)
+		fmt.Printf("  policy:   %s  capabilities=%s on %s and %s\n",
+			policyName, formatCapabilities(caps), dataPath, metadataPath)
 	}
 	if roleName != "" {
 		fmt.Printf("  role:     %s\n", roleName)

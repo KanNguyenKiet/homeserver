@@ -77,10 +77,11 @@ Every integration uses the same role flags:
 
 ### Updating an existing secret
 
-After the shared policy and role exist, write or rotate fields with `-patch` only.
-**Do not pass `-policy` or `-role`** — each `-policy cluster-secrets-read` run
-*replaces* the policy with read access to that single path, which breaks every
-other synced secret.
+After the shared policy and role exist, write or rotate fields with `-patch` only
+and omit `-policy` and `-role`. The `cluster-secrets-read` policy grants read on
+all `homeserver/*` paths; as of the `vaultsecret` fix, passing
+`-policy cluster-secrets-read` also writes that wildcard instead of narrowing to
+one path.
 
 ```bash
 scripts/vaultsecret/vaultsecret \
@@ -90,10 +91,10 @@ scripts/vaultsecret/vaultsecret \
   -restart argocd-dex-server -restart argocd-server
 ```
 
-!!! warning "Do not overwrite cluster-secrets-read per secret"
-    Running `vaultsecret` with `-policy cluster-secrets-read` for one path (e.g.
-    `homeserver/registry`) narrows the policy to that path only. Other
-    `ClusterExternalSecret` resources then fail with Vault **403 permission
+!!! warning "Prefer -patch for secret updates"
+    After bootstrap, use `-patch` without `-policy` or `-role` when rotating
+    credentials. Older `vaultsecret` builds replaced `cluster-secrets-read` with a
+    single-path policy and broke other ExternalSecrets with Vault **403 permission
     denied**.
 
 ## Vault policy and role
