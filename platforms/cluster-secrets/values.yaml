@@ -93,11 +93,13 @@ secrets:
     namespaces:
       - tailscale
     data:
-      - secretKey: clientId
+      # Tailscale operator mounts this Secret at /oauth and reads client_id and
+      # client_secret filenames — not camelCase keys.
+      - secretKey: client_id
         remoteRef:
           key: homeserver/tailscale
           property: clientId
-      - secretKey: clientSecret
+      - secretKey: client_secret
         remoteRef:
           key: homeserver/tailscale
           property: clientSecret
