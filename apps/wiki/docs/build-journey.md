@@ -18,8 +18,10 @@ configuration lives in `values.yaml` files.
 4. **Initialize Vault** — Run `bootstrap-vault.sh` to init, unseal, enable KV and
    Kubernetes auth, and store the Cloudflare tunnel token.
 
-5. **Wire up secrets** — Use `vaultsecret` for Gitea DB creds, Argo CD GitHub OAuth,
-   and Tailscale OAuth. External Secrets creates the in-cluster Secrets.
+5. **Wire up secrets** — Deploy `platforms/cluster-secrets`, then use `vaultsecret`
+   for Gitea DB creds, Argo CD GitHub OAuth, and Tailscale OAuth. External Secrets
+   syncs Vault paths into in-cluster Secrets via the shared `cluster-secrets` role.
+   See [Secret management](secrets.md) for the policy footgun and troubleshooting.
 
 6. **Deploy applications** — Gitea, Homepage, and Wiki. Configure Cloudflare Tunnel
    hostname routes pointing to each Service.
