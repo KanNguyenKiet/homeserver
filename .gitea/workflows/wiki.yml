@@ -41,23 +41,10 @@ jobs:
               'Add them under ops → Settings → Actions → Secrets:' \
               '  https://git.huukiet.com/ops/-/settings/actions/secrets' \
               '' \
-              '  REGISTRY_USER   — Gitea bot username (e.g. actions-bot)' \
-              '  REGISTRY_TOKEN  — PAT with read:package and write:package'
+              '  REGISTRY_USER   — Gitea bot username (e.g. action-bot)' \
+              '  REGISTRY_TOKEN  — 40-char hex PAT with write:package'
             exit 1
           fi
-
-      # TEMPORARY: remove after fixing registry auth — prints secrets to the job log.
-      - name: Debug registry secrets
-        env:
-          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-        run: |
-          echo "REGISTRY_USER=${REGISTRY_USER}"
-          echo "REGISTRY_TOKEN=${REGISTRY_TOKEN}"
-          echo "REGISTRY_USER length: ${#REGISTRY_USER}"
-          echo "REGISTRY_TOKEN length: ${#REGISTRY_TOKEN}"
-          printf 'REGISTRY_USER quoted: %q\n' "${REGISTRY_USER}"
-          printf 'REGISTRY_TOKEN quoted: %q\n' "${REGISTRY_TOKEN}"
 
       - name: Log in to Gitea registry
         env:
@@ -67,21 +54,28 @@ jobs:
           REGISTRY_USER="$(printf '%s' "${REGISTRY_USER}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           REGISTRY_TOKEN="$(printf '%s' "${REGISTRY_TOKEN}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
-          http_code="$(curl -sS -o /dev/null -w '%{http_code}' \
+          registry_scope='repository:ops/homeserver-wiki:pull,push'
+          http_code="$(curl -sS -o /tmp/registry-token.json -w '%{http_code}' \
             -u "${REGISTRY_USER}:${REGISTRY_TOKEN}" \
-            "https://${{ env.REGISTRY_HOST }}/v2/")"
-          if [[ "${http_code}" != "200" ]]; then
-            printf 'Registry auth check failed (HTTP %s).\n' "${http_code}"
+            -G \
+            --data-urlencode 'service=container_registry' \
+            --data-urlencode "scope=${registry_scope}" \
+            "https://${{ env.REGISTRY_HOST }}/v2/token")"
+
+          if [[ "${http_code}" != "200" ]] || ! grep -q '"token"' /tmp/registry-token.json; then
+            printf 'Registry token request failed (HTTP %s).\n' "${http_code}"
             printf '%s\n' \
               'Verify org secrets at https://git.huukiet.com/ops/-/settings/actions/secrets:' \
               '  REGISTRY_USER  — exact Gitea username that owns the PAT' \
-              '  REGISTRY_TOKEN — PAT with read:package and write:package (not the runner token)' \
-              'Do not use your account password; create a new PAT if scopes were wrong.'
+              '  REGISTRY_TOKEN — 40-char hex PAT with write:package (not the runner token)'
             exit 1
           fi
 
-          printf '%s' "${REGISTRY_TOKEN}" | docker login "${{ env.REGISTRY_HOST }}" \
-            -u "${REGISTRY_USER}" --password-stdin
+          if ! printf '%s' "${REGISTRY_TOKEN}" | docker login "${{ env.REGISTRY_HOST }}" \
+            -u "${REGISTRY_USER}" --password-stdin; then
+            printf 'docker login failed after /v2/token succeeded.\n'
+            exit 1
+          fi
 
       - name: Build and push image
         run: |
