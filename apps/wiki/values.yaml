@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   registryHost: git.huukiet.com
   repository: git.huukiet.com/ops/homeserver-wiki
-  tag: 2b6db36e0c84767ce86924c5ab529f12335aace9
+  tag: 0dbd10d7b851483dd74b5dc1964c55e27347968b
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
