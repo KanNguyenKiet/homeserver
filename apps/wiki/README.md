@@ -32,7 +32,7 @@ The workflow only runs when wiki source files change, not when only the image ta
 `values.yaml` is updated (avoids infinite loops).
 
 Before the first deploy, store Gitea registry pull credentials in Vault — see
-the repository README **Cluster secrets** section.
+[Secret management](https://wiki.huukiet.com/secrets/) on the wiki.
 
 ## Manual image build
 

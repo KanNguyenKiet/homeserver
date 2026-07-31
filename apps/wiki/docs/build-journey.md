@@ -27,8 +27,5 @@ configuration lives in `values.yaml` files.
    hostname routes pointing to each Service.
 
 7. **Day-two operations** — Push to `master`, run `deploy.sh` on the server, or let
-   Argo CD auto-sync. Unseal Vault after restarts.
-
-!!! note "Operator manual"
-    The full operational runbook with commands lives in the repository README.
-    This wiki is the architectural summary; the README is the operator manual.
+   Argo CD auto-sync. Unseal Vault after restarts. See [Secret management](secrets.md)
+   for Vault and External Secrets operations.

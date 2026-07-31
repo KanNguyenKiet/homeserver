@@ -203,6 +203,3 @@ workloads that read the secret at startup (e.g. Argo CD Dex and server).
 !!! warning "Recovery material"
     Vault recovery material (root token and unseal keys) is stored offline only.
     It never lives in Git or inside the cluster.
-
-See the repository [README](https://github.com/KanNguyenKiet/homeserver/blob/master/README.md)
-for the full operator runbook (Gitea, registry, Tailscale, Cloudflare, and more).

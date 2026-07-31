@@ -6,8 +6,9 @@ integration. Given a secret path and a set of fields, it can wait for Vault,
 prompt for the root token, write a read-only policy, write a Kubernetes auth
 role bound to one ServiceAccount, write the secret fields into Vault, then
 wait for External Secrets to sync the resulting Kubernetes Secret. Adding a
-new secret to Vault never requires a new shell script; see the top-level
-`README.md` for how the Gitea, Argo CD, and Tailscale sections use it.
+new secret to Vault never requires a new shell script; see
+[Secret management](https://wiki.huukiet.com/secrets/) on the wiki and this
+directory's README for usage.
 
 ## How it reaches Vault
 
@@ -29,8 +30,8 @@ go build -o vaultsecret .
 ## Usage
 
 Preview any invocation without contacting the cluster with `-dry-run`. For
-example, this writes Gitea's database credentials (see the top-level
-`README.md`'s "Native PostgreSQL for apps" section):
+example, this writes Gitea's database credentials (see [Build journey](https://wiki.huukiet.com/build-journey/)
+and [Secret management](https://wiki.huukiet.com/secrets/) on the wiki):
 
 ```bash
 ./vaultsecret -dry-run \
@@ -72,8 +73,7 @@ Run `./vaultsecret -h` for the full flag reference. The most useful flags:
 
 ## Examples
 
-Tailscale operator OAuth credentials (see the top-level `README.md`'s
-"Tailscale Kubernetes Operator" section):
+Tailscale operator OAuth credentials (see [Secret management](https://wiki.huukiet.com/secrets/)):
 
 ```bash
 ./vaultsecret \
@@ -84,9 +84,8 @@ Tailscale operator OAuth credentials (see the top-level `README.md`'s
   -wait-externalsecret operator-oauth -app-namespace tailscale
 ```
 
-Argo CD GitHub OAuth credentials (see the top-level `README.md`'s "Argo CD
-GitHub login" section), followed by a restart of the components that read
-them:
+Argo CD GitHub OAuth credentials (see [Secret management](https://wiki.huukiet.com/secrets/)),
+followed by a restart of the components that read them:
 
 ```bash
 ./vaultsecret \
