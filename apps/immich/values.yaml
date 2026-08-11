@@ -1,0 +1,96 @@
+nameOverride: ""
+fullnameOverride: ""
+
+libraryPersistence:
+  claimName: immich-library
+  size: 200Gi
+  storageClass: ""
+
+database:
+  host: 192.168.100.10
+  port: "5432"
+  existingSecret: immich-secret
+  secretKeys:
+    name: DB_NAME
+    user: DB_USER
+    password: DB_PASS
+
+immich:
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            tag: v3.0.0
+          env:
+            DB_HOSTNAME: "192.168.100.10"
+            DB_PORT: "5432"
+            DB_USERNAME:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-secret
+                  key: DB_USER
+            DB_DATABASE_NAME:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-secret
+                  key: DB_NAME
+            DB_PASSWORD:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-secret
+                  key: DB_PASS
+
+  immich:
+    metrics:
+      enabled: false
+    persistence:
+      library:
+        existingClaim: immich-library
+
+  valkey:
+    enabled: true
+
+  server:
+    enabled: true
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: ghcr.io/immich-app/immich-server
+              pullPolicy: IfNotPresent
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+        hosts:
+          - host: photos.huukiet.com
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+        tls: []
+
+  machine-learning:
+    enabled: true
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: ghcr.io/immich-app/immich-machine-learning
+              pullPolicy: IfNotPresent
+            env:
+              TRANSFORMERS_CACHE: /cache
+              HF_XET_CACHE: /cache/huggingface-xet
+              MPLCONFIGDIR: /cache/matplotlib-config
+    persistence:
+      cache:
+        enabled: true
+        type: persistentVolumeClaim
+        size: 10Gi
+        accessMode: ReadWriteOnce

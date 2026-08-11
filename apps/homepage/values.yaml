@@ -106,6 +106,10 @@ config:
             icon: mdi-book-open-page-variant
             href: https://wiki.huukiet.com
             description: MkDocs stack documentation
+        - Immich:
+            icon: mdi-image-multiple
+            href: https://photos.huukiet.com
+            description: Photo and video backup
         - Grafana:
             icon: grafana.svg
             href: https://grafana.huukiet.com

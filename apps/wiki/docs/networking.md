@@ -5,6 +5,7 @@
 | Hostname | Service |
 | --- | --- |
 | `git.huukiet.com` | Gitea |
+| `photos.huukiet.com` | Immich |
 | `argocd.huukiet.com` | Argo CD (GitHub OAuth via Dex) |
 | `home.huukiet.com` | Homepage dashboard |
 | `wiki.huukiet.com` | This wiki |
@@ -17,9 +18,29 @@ reach the homeserver and cluster internals without exposing ports to the interne
 
 ## Host PostgreSQL
 
-Gitea connects to PostgreSQL running natively on the Ubuntu host. PostgreSQL listens
+Gitea connects to PostgreSQL running natively on the Ubuntu host. Immich uses the
+same instance with a separate database after **pgvector** and **VectorChord** are
+installed (see [Immich host PostgreSQL](immich-postgres.md)). PostgreSQL listens
 on localhost and the LAN IP; `pg_hba.conf` allows only the k3s Pod CIDR. This keeps
 database backups and upgrades outside the Kubernetes lifecycle.
+
+## Immich public hostname (Cloudflare Zero Trust)
+
+Immich is exposed at `photos.huukiet.com` through the same tunnel and
+**ingress-nginx** path as the other apps. In Cloudflare Zero Trust, add a **Public
+Hostname** for `photos.huukiet.com` whose origin matches your existing routes (for
+example the in-cluster ingress controller Service on port 80). The Immich Helm chart
+creates an Ingress with host `photos.huukiet.com` and unlimited upload body size.
+
+After the Immich Application syncs, confirm the backend:
+
+```bash
+kubectl -n immich get ingress
+kubectl -n immich get svc
+```
+
+If you route the tunnel directly to a Service instead of ingress-nginx, target the
+Immich server Service on port **2283** (release name dependent; check `kubectl get svc`).
 
 ## k3s worker nodes (UFW)
 

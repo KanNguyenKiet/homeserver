@@ -26,7 +26,7 @@ every app depends on, the GitOps control plane, and user-facing applications.
  |       v            v                v            |
  |  +---------+  +---------+    +-----------+      |
  |  | Gitea   |  | Homepage|    |   Vault   |      |
- |  | Wiki    |  |         |    |  (Raft)   |      |
+ |  | Wiki    |  | Immich  |    |  (Raft)   |      |
  |  +---------+  +---------+    +-----------+      |
  +------------------------|-------------------------+
                           |
@@ -49,7 +49,7 @@ flowchart LR
 
 TLS terminates at Cloudflare. The tunnel connector forwards plain HTTP to
 in-cluster services. Each app exposes an Ingress with its own hostname (for example
-`git.huukiet.com`, `wiki.huukiet.com`).
+`git.huukiet.com`, `photos.huukiet.com`, `wiki.huukiet.com`).
 
 ## GitOps reconciliation
 

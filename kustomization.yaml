@@ -15,3 +15,4 @@ resources:
   - apps/gitea-actions/application.yaml
   - apps/homepage/application.yaml
   - apps/wiki/application.yaml
+  - apps/immich/application.yaml

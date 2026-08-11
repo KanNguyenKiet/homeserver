@@ -21,6 +21,23 @@ registry:
 
 # ClusterExternalSecret definitions. Apps only reference the target secret name.
 secrets:
+  - name: immich-secret
+    namespaces:
+      - immich
+    data:
+      - secretKey: DB_NAME
+        remoteRef:
+          key: homeserver/immich
+          property: dbName
+      - secretKey: DB_USER
+        remoteRef:
+          key: homeserver/immich
+          property: dbUser
+      - secretKey: DB_PASS
+        remoteRef:
+          key: homeserver/immich
+          property: dbPassword
+
   - name: gitea-secret
     namespaces:
       - gitea
