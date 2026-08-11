@@ -64,6 +64,7 @@ nav:
   - Components: components.md
   - Secret management: secrets.md
   - Networking: networking.md
+  - Immich host PostgreSQL: immich-postgres.md
   - Build journey: build-journey.md
   - Tradeoffs: tradeoffs.md
   - Links: links.md

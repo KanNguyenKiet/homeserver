@@ -20,6 +20,7 @@ readonly CHARTS=(
   "apps/grafana-dashboards"
   "apps/homepage"
   "apps/wiki"
+  "apps/immich"
 )
 
 readonly RELEASES=(
@@ -35,6 +36,7 @@ readonly RELEASES=(
   "grafana-dashboards"
   "homepage"
   "wiki"
+  "immich"
 )
 
 readonly NAMESPACES=(
@@ -50,6 +52,7 @@ readonly NAMESPACES=(
   "monitoring"
   "homepage"
   "wiki"
+  "immich"
 )
 
 log() {
@@ -130,6 +133,7 @@ helm dependency update platforms/nginx-ingress
 helm dependency update platforms/tailscale
 helm dependency update platforms/monitoring
 helm dependency update apps/gitea-actions
+helm dependency update apps/immich
 
 log "Linting and rendering Helm charts"
 render_dir="$(mktemp -d)"
@@ -174,7 +178,7 @@ log "Refreshing child Applications"
 kubectl annotate applications.argoproj.io --all -n argocd \
   argocd.argoproj.io/refresh=hard --overwrite
 
-for application in argocd-config external-secrets vault cluster-secrets nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea gitea-actions homepage wiki; do
+for application in argocd-config external-secrets vault cluster-secrets nginx-ingress cloudflared tailscale monitoring grafana-dashboards gitea gitea-actions homepage wiki immich; do
   wait_for_application "$application" "$EXPECTED_REVISION"
 done
 

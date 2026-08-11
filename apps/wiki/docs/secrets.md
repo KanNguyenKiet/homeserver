@@ -37,6 +37,7 @@ External Secrets authenticates to Vault as the shared Kubernetes auth role
 | Kubernetes secret | Namespace(s) | Vault path |
 | --- | --- | --- |
 | `gitea-secret` | `gitea` | `homeserver/gitea` |
+| `immich-secret` | `immich` | `homeserver/immich` |
 | `gitea-actions-token` | `gitea` | `homeserver/gitea-actions` |
 | `gitea-registry` | all non-system | `homeserver/registry` |
 | `grafana-admin` | `monitoring` | `homeserver/grafana` |

@@ -9,6 +9,7 @@
 | **cloudflared** | Cloudflare Tunnel connector (2 replicas) | `cloudflared` |
 | **Tailscale Operator** | Subnet router for LAN, Pod, and Service CIDRs | `tailscale` |
 | **Gitea** | Self-hosted Git forge | `gitea` |
+| **Immich** | Photo and video backup | `immich` |
 | **Homepage** | Service dashboard at `home.huukiet.com` | `homepage` |
 | **Wiki** | This documentation site (MkDocs Material) | `wiki` |
-| **PostgreSQL 16** | Gitea database (runs on the host, not in k8s) | — |
+| **PostgreSQL 16** | Gitea and Immich databases (runs on the host, not in k8s) | — |
