@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Thiệp sinh nhật — Nguyễn Thị Phượng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --wine: #3a1018;
+      --night: #14080c;
+      --phuong: #c4452d;
+      --coral: #e36a52;
+      --gold: #d4a574;
+      --gold-soft: #e8c9a4;
+      --cream: #f6eee3;
+      --paper: #fbf6ee;
+      --ink: #2b1a14;
+      --ink-soft: #5c4338;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      height: 100%;
+    }
+
+    body {
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
+      background: var(--night);
+      color: var(--cream);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .sky {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 115%, rgba(196, 69, 45, 0.28), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 80% 10%, rgba(212, 165, 116, 0.12), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 15% 20%, rgba(90, 20, 30, 0.55), transparent 50%),
+        linear-gradient(180deg, #1a0c10 0%, #2a1016 42%, #3d151c 100%);
+      z-index: 0;
+    }
+
+    .sky::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+      opacity: 0.07;
+      pointer-events: none;
+    }
+
+    .glow {
+      position: fixed;
+      width: 42vw;
+      height: 42vw;
+      left: 50%;
+      top: 58%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(227, 106, 82, 0.22), transparent 68%);
+      filter: blur(8px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .firefly {
+      position: fixed;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--gold-soft);
+      box-shadow: 0 0 8px 3px rgba(232, 201, 164, 0.55);
+      z-index: 2;
+      pointer-events: none;
+      animation: drift 9s ease-in-out infinite;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0); opacity: 0.25; }
+      50% { transform: translate(var(--dx), var(--dy)); opacity: 0.9; }
+    }
+
+    .stage {
+      position: relative;
+      z-index: 4;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    .hint {
+      position: absolute;
+      top: max(28px, env(safe-area-inset-top));
+      left: 0;
+      right: 0;
+      text-align: center;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--gold-soft);
+      opacity: 0.78;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    body.is-open .hint {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+    }
+
+    body.is-open .scene {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s 0.85s ease;
+    }
+
+    .scene {
+      perspective: 1400px;
+      width: min(92vw, 420px);
+    }
+
+    .envelope {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1.62 / 1;
+      transform-style: preserve-3d;
+      cursor: pointer;
+      filter: drop-shadow(0 28px 40px rgba(0, 0, 0, 0.45));
+      transition: transform 0.5s ease;
+    }
+
+    .envelope:hover { transform: translateY(-4px); }
+    body.is-open .envelope { pointer-events: none; }
+
+    .paper {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.18), transparent 28%),
+        repeating-linear-gradient(90deg, transparent 0 11px, rgba(90, 50, 30, 0.03) 11px 12px),
+        linear-gradient(145deg, #f7efe4 0%, #efe3d2 100%);
+    }
+
+    .pocket,
+    .flap,
+    .back {
+      position: absolute;
+      inset: 0;
+    }
+
+    .back {
+      border-radius: 6px 6px 10px 10px;
+      box-shadow: inset 0 0 0 1px rgba(90, 50, 30, 0.08);
+      z-index: 1;
+    }
+
+    .pocket {
+      z-index: 3;
+      clip-path: polygon(0 38%, 50% 72%, 100% 38%, 100% 100%, 0 100%);
+      border-radius: 0 0 10px 10px;
+    }
+
+    .pocket::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(43, 26, 20, 0.08), transparent 30%);
+      clip-path: inherit;
+    }
+
+    .flap {
+      z-index: 5;
+      transform-origin: top center;
+      transform-style: preserve-3d;
+      clip-path: polygon(0 0, 100% 0, 100% 8%, 50% 58%, 0 8%);
+      transition: transform 1.05s cubic-bezier(0.4, 0.05, 0.2, 1);
+      backface-visibility: hidden;
+    }
+
+    .flap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #fbf6ee, #eadcc8);
+      clip-path: inherit;
+    }
+
+    body.is-open .flap {
+      transform: rotateX(188deg);
+      z-index: 1;
+    }
+
+    .seal {
+      position: absolute;
+      left: 50%;
+      top: 46%;
+      width: 58px;
+      height: 58px;
+      transform: translate(-50%, -50%);
+      z-index: 6;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #e36a52, #9a2a1c 62%, #6d1b14);
+      box-shadow:
+        0 6px 14px rgba(80, 16, 16, 0.35),
+        inset 0 1px 0 rgba(255, 220, 200, 0.35);
+      display: grid;
+      place-items: center;
+      transition: transform 0.45s ease, opacity 0.45s ease;
+    }
+
+    .seal svg { width: 28px; height: 28px; }
+    body.is-open .seal {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+      pointer-events: none;
+    }
+
+    .letter {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      top: 10%;
+      height: 86%;
+      z-index: 2;
+      border-radius: 4px;
+      background: var(--paper);
+      box-shadow: 0 10px 24px rgba(40, 16, 12, 0.18);
+      transform: translateY(18%);
+      transition: transform 1.15s 0.28s cubic-bezier(0.22, 0.8, 0.24, 1);
+      overflow: hidden;
+    }
+
+    body.is-open .letter {
+      transform: translateY(-118%);
+    }
+
+    .card {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      padding: max(20px, env(safe-area-inset-top)) 18px 32px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(24px) scale(0.96);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    body.is-open .card {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+      transition-delay: 1.05s;
+    }
+
+    .sheet {
+      width: min(92vw, 440px);
+      max-height: calc(100dvh - 64px);
+      overflow: auto;
+      border-radius: 18px;
+      padding: 36px 32px 28px;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.55), transparent 20%),
+        var(--paper);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.38),
+        0 0 0 1px rgba(212, 165, 116, 0.28);
+      position: relative;
+    }
+
+    .sheet::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 1px solid rgba(196, 69, 45, 0.18);
+      border-radius: 10px;
+      pointer-events: none;
+    }
+
+    .ornament {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      color: var(--phuong);
+    }
+
+    .kicker {
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--phuong);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
+      font-size: clamp(28px, 8vw, 40px);
+      text-align: center;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .rule {
+      width: 72px;
+      height: 1px;
+      margin: 14px auto 18px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .letter-body {
+      font-size: 15.5px;
+      font-weight: 300;
+      line-height: 1.75;
+      color: var(--ink-soft);
+      text-align: justify;
+      hyphens: auto;
+    }
+
+    .letter-body p + p { margin-top: 14px; }
+
+    .letter-body em {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-style: italic;
+      font-size: 1.12em;
+      color: var(--ink);
+    }
+
+    .signoff {
+      margin-top: 22px;
+      text-align: right;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-style: italic;
+      font-size: 20px;
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid rgba(196, 69, 45, 0.35);
+      background: transparent;
+      color: var(--phuong);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    button:hover { background: rgba(196, 69, 45, 0.08); }
+
+    .petals { position: fixed; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+
+    .petal {
+      position: absolute;
+      top: -40px;
+      width: 16px;
+      height: 24px;
+      background: radial-gradient(ellipse at 30% 25%, #ffb08a, var(--phuong) 58%, #8e2416);
+      border-radius: 80% 0 70% 20%;
+      opacity: 0;
+      animation: fall linear forwards;
+    }
+
+    body.is-open .petal { opacity: 0.92; }
+
+    @keyframes fall {
+      0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 0; }
+      12% { opacity: 0.9; }
+      100% { transform: translate3d(var(--drift), 110vh, 0) rotate(var(--spin)); opacity: 0.15; }
+    }
+
+    .music {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(232, 201, 164, 0.35);
+      background: rgba(20, 8, 12, 0.45);
+      color: var(--gold-soft);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      padding: 0;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .music svg { width: 18px; height: 18px; }
+
+    .music.is-on {
+      border-color: rgba(227, 106, 82, 0.55);
+      color: var(--coral);
+      box-shadow: 0 0 0 4px rgba(196, 69, 45, 0.12);
+    }
+
+    @media (max-width: 480px) {
+      .sheet { padding: 28px 22px 22px; }
+      .letter-body { font-size: 14.5px; text-align: left; }
+    }
+
+    body.no-motion .envelope,
+    body.no-motion .flap,
+    body.no-motion .letter,
+    body.no-motion .card,
+    body.no-motion .seal {
+      transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .envelope, .flap, .letter, .card, .petal, .firefly { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sky"></div>
+  <div class="glow"></div>
+  <div class="petals" id="petals" aria-hidden="true"></div>
+
+  <main class="stage">
+    <p class="hint">Nhấn vào phong bì để mở thiệp</p>
+
+    <div class="scene">
+      <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Mở thiệp sinh nhật">
+        <div class="back paper"></div>
+        <div class="letter paper"></div>
+        <div class="pocket paper"></div>
+        <div class="flap"></div>
+        <div class="seal" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none">
+            <path d="M32 8c2 8 4 12 12 16-8 2-12 6-16 16-4-10-8-14-16-16 8-4 10-8 12-16z" fill="#f6eee3" opacity=".92"/>
+            <path d="M32 28c1.2 5 2.4 7.4 7.5 10-5 1.2-7.4 3.8-10 10-2.6-6.2-5-8.8-10-10 5.1-2.6 6.3-5 7.5-10z" fill="#f6eee3" opacity=".7"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <article class="card" aria-hidden="true" id="card">
+    <div class="sheet">
+      <div class="ornament" aria-hidden="true">
+        <svg width="72" height="36" viewBox="0 0 72 36" fill="none" aria-hidden="true">
+          <g fill="currentColor">
+            <path d="M36 4c1.6 7.2 3.4 10.6 10.4 14.2C39.4 20.6 37.2 24.8 36 32c-1.2-7.2-3.4-11.4-10.4-13.8C32.6 14.6 34.4 11.2 36 4z"/>
+            <path d="M22 16c-3.2-4.4-8.2-5.2-12.8-3.6 3.2 3.4 3.6 7.8 1.4 12.4 5.2-1.2 9.4-3.6 11.4-8.8z" opacity=".7"/>
+            <path d="M50 16c3.2-4.4 8.2-5.2 12.8-3.6-3.2 3.4-3.6 7.8-1.4 12.4-5.2-1.2-9.4-3.6-11.4-8.8z" opacity=".7"/>
+            <path d="M28 20c-4.8-1.4-8.8.6-11.2 4.8 4.4.6 8 3 10.2 7.2 1-5.4 1.4-9.2 1-12z" opacity=".45"/>
+            <path d="M44 20c4.8-1.4 8.8.6 11.2 4.8-4.4.6-8 3-10.2 7.2-1-5.4-1.4-9.2-1-12z" opacity=".45"/>
+            <circle cx="36" cy="18" r="2.1"/>
+          </g>
+        </svg>
+      </div>
+      <p class="kicker">Sinh nhật vui vẻ</p>
+      <h1>Nguyễn Thị Phượng</h1>
+      <div class="rule"></div>
+      <div class="letter-body">
+        <p>Có những cái tên vừa đọc đã thấy một mùa hè. <em>Phượng</em> là một cái tên như thế — rực, ấm, và để lại màu rất lâu sau khi cánh hoa đã rơi.</p>
+        <p>Sang tuổi mới, chúc bạn được sống đúng nhịp mình muốn: đủ khỏe để đi, đủ chậm để nhớ, và đủ người thương để không phải đi một mình.</p>
+        <p>Mong năm này trời dịu với bạn hơn một chút. Những điều đang dang dở sẽ tới nơi. Những điều mới sẽ ghé qua đúng lúc. Và mỗi sáng thức dậy, bạn vẫn thấy mình đáng được vui.</p>
+      </div>
+      <p class="signoff">Một lời chúc thật lòng.</p>
+      <div class="actions">
+        <button type="button" id="replay">Mở lại thiệp</button>
+      </div>
+    </div>
+  </article>
+
+  <button class="music" id="music" type="button" aria-label="Bật nhạc nền" title="Nhạc nền">
+    <svg id="music-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <path d="M9 18V6l10-2v12"/>
+      <circle cx="7" cy="18" r="2.2"/>
+      <circle cx="17" cy="16" r="2.2"/>
+    </svg>
+  </button>
+
+  <script>
+    const envelope = document.getElementById("envelope");
+    const card = document.getElementById("card");
+    const petals = document.getElementById("petals");
+    const musicBtn = document.getElementById("music");
+
+    function openCard() {
+      if (document.body.classList.contains("is-open")) return;
+      document.body.classList.add("is-open");
+      card.setAttribute("aria-hidden", "false");
+      spawnPetals();
+      startMusic();
+    }
+
+    if (new URLSearchParams(location.search).has("open")) {
+      document.body.classList.add("is-open", "no-motion");
+      card.setAttribute("aria-hidden", "false");
+      spawnPetals();
+    }
+
+    envelope.addEventListener("click", openCard);
+    envelope.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openCard();
+      }
+    });
+
+    document.getElementById("replay").addEventListener("click", () => {
+      document.body.classList.remove("is-open");
+      card.setAttribute("aria-hidden", "true");
+      petals.innerHTML = "";
+    });
+
+    function spawnPetals() {
+      petals.innerHTML = "";
+      for (let i = 0; i < 22; i += 1) {
+        const petal = document.createElement("span");
+        petal.className = "petal";
+        petal.style.left = Math.random() * 100 + "vw";
+        petal.style.setProperty("--drift", (Math.random() * 80 - 40) + "px");
+        petal.style.setProperty("--spin", (Math.random() * 420 - 120) + "deg");
+        petal.style.animationDuration = 6 + Math.random() * 6 + "s";
+        petal.style.animationDelay = Math.random() * 2.4 + "s";
+        petal.style.transform = "scale(" + (0.7 + Math.random() * 0.7) + ")";
+        petals.appendChild(petal);
+      }
+    }
+
+    for (let i = 0; i < 14; i += 1) {
+      const fly = document.createElement("span");
+      fly.className = "firefly";
+      fly.style.left = Math.random() * 100 + "vw";
+      fly.style.top = Math.random() * 100 + "vh";
+      fly.style.setProperty("--dx", (Math.random() * 40 - 20) + "px");
+      fly.style.setProperty("--dy", (Math.random() * 50 - 25) + "px");
+      fly.style.animationDelay = (Math.random() * 6) + "s";
+      fly.style.animationDuration = 7 + Math.random() * 6 + "s";
+      document.body.appendChild(fly);
+    }
+
+    let audioCtx;
+    let playing = false;
+    let nextTimer;
+
+    // Happy Birthday — public domain melody, music-box voicing
+    const melody = [
+      [72, 0.22], [72, 0.22], [74, 0.45], [72, 0.45], [77, 0.45], [76, 0.95],
+      [72, 0.22], [72, 0.22], [74, 0.45], [72, 0.45], [79, 0.45], [77, 0.95],
+      [72, 0.22], [72, 0.22], [84, 0.45], [81, 0.45], [77, 0.45], [76, 0.45], [74, 0.95],
+      [82, 0.22], [82, 0.22], [81, 0.45], [77, 0.45], [79, 0.45], [77, 1.25],
+    ];
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function setMusicUi(on) {
+      musicBtn.classList.toggle("is-on", on);
+      musicBtn.setAttribute("aria-label", on ? "Tắt nhạc Happy Birthday" : "Bật nhạc Happy Birthday");
+    }
+
+    function playNote(midi, time, dur) {
+      const freq = midiToFreq(midi);
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+      const osc = audioCtx.createOscillator();
+      const harmonic = audioCtx.createOscillator();
+      const harmonicGain = audioCtx.createGain();
+
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, time);
+      harmonic.type = "sine";
+      harmonic.frequency.setValueAtTime(freq * 2, time);
+      harmonicGain.gain.setValueAtTime(0.18, time);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2200, time);
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.085, time + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      osc.connect(filter);
+      harmonic.connect(harmonicGain);
+      harmonicGain.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(time);
+      harmonic.start(time);
+      osc.stop(time + dur + 0.04);
+      harmonic.stop(time + dur + 0.04);
+    }
+
+    function playMelody() {
+      if (!playing) return;
+      let time = audioCtx.currentTime + 0.06;
+      melody.forEach(([midi, dur]) => {
+        playNote(midi, time, dur);
+        time += dur;
+      });
+      nextTimer = setTimeout(playMelody, (time - audioCtx.currentTime + 1.4) * 1000);
+    }
+
+    async function startMusic() {
+      if (playing) return;
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      playing = true;
+      setMusicUi(true);
+      playMelody();
+    }
+
+    function stopMusic() {
+      playing = false;
+      clearTimeout(nextTimer);
+      setMusicUi(false);
+    }
+
+    musicBtn.addEventListener("click", async () => {
+      if (playing) stopMusic();
+      else await startMusic();
+    });
+  </script>
+</body>
+</html>

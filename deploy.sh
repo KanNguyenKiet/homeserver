@@ -20,6 +20,7 @@ readonly CHARTS=(
   "apps/grafana-dashboards"
   "apps/homepage"
   "apps/wiki"
+  "apps/birthday"
   "apps/immich"
 )
 
@@ -36,6 +37,7 @@ readonly RELEASES=(
   "grafana-dashboards"
   "homepage"
   "wiki"
+  "birthday"
   "immich"
 )
 
@@ -52,6 +54,7 @@ readonly NAMESPACES=(
   "monitoring"
   "homepage"
   "wiki"
+  "birthday"
   "immich"
 )
 

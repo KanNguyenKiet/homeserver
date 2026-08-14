@@ -9,6 +9,7 @@
 | `argocd.huukiet.com` | Argo CD (GitHub OAuth via Dex) |
 | `home.huukiet.com` | Homepage dashboard |
 | `wiki.huukiet.com` | This wiki |
+| `birthday.huukiet.com` | Birthday card |
 
 ## Private access (Tailscale)
 
