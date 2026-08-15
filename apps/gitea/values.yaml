@@ -42,6 +42,8 @@ gitea:
     enabled: true
   packages:
     enabled: true
+  webhook:
+    allowedHostList: external,loopback
   database:
     type: postgres
     # Native PostgreSQL running on the homeserver, outside Kubernetes.

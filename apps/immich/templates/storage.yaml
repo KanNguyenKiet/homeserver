@@ -1,0 +1,42 @@
+{{- if .Values.library.create }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.library.persistentVolumeName }}
+  labels:
+    {{- include "immich-homeserver.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+spec:
+  capacity:
+    storage: {{ .Values.library.size }}
+  accessModes:
+    {{- toYaml .Values.library.accessModes | nindent 4 }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.library.storageClass | quote }}
+  volumeMode: Filesystem
+  hostPath:
+    path: {{ .Values.library.hostPath | quote }}
+    type: Directory
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.library.claimName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich-homeserver.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+spec:
+  accessModes:
+    {{- toYaml .Values.library.accessModes | nindent 4 }}
+  storageClassName: {{ .Values.library.storageClass | quote }}
+  volumeMode: Filesystem
+  volumeName: {{ .Values.library.persistentVolumeName }}
+  resources:
+    requests:
+      storage: {{ .Values.library.size }}
+{{- end }}

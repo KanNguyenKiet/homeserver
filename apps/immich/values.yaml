@@ -1,19 +1,43 @@
-nameOverride: ""
-fullnameOverride: ""
-
-libraryPersistence:
-  claimName: immich-library
-  size: 200Gi
-  storageClass: ""
-
 database:
-  host: 192.168.100.10
-  port: "5432"
-  existingSecret: immich-secret
+  # Dedicated native PostgreSQL cluster on the homeserver SSD. Keep this database
+  # separate from the Gitea cluster because Immich expects a superuser account.
+  host: 192.168.100.11
+  port: 5433
+  existingSecret: immich-database
   secretKeys:
-    name: DB_NAME
-    user: DB_USER
-    password: DB_PASS
+    name: DB_DATABASE_NAME
+    user: DB_USERNAME
+    password: DB_PASSWORD
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    serviceAccountName: immich-vault-auth
+    mountPath: kubernetes
+    role: immich
+    audiences:
+      - vault
+  remoteRef:
+    key: homeserver/immich
+
+library:
+  # The ZFS dataset must already be mounted before this Application is synced.
+  # hostPath type Directory intentionally prevents writes to the OS disk if the
+  # pool is missing after a reboot.
+  create: true
+  persistentVolumeName: immich-library
+  claimName: immich-library
+  storageClass: immich-library-static
+  size: 1Ti
+  accessModes:
+    - ReadWriteOnce
+  hostPath: /tank/immich/library
 
 immich:
   controllers:
@@ -21,76 +45,82 @@ immich:
       containers:
         main:
           image:
-            tag: v3.0.0
-          env:
-            DB_HOSTNAME: "192.168.100.10"
-            DB_PORT: "5432"
-            DB_USERNAME:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-secret
-                  key: DB_USER
-            DB_DATABASE_NAME:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-secret
-                  key: DB_NAME
-            DB_PASSWORD:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-secret
-                  key: DB_PASS
+            tag: v3.1.0
 
   immich:
     metrics:
-      enabled: false
+      enabled: true
     persistence:
       library:
         existingClaim: immich-library
+    configuration:
+      trash:
+        enabled: true
+        days: 30
 
   valkey:
     enabled: true
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
 
   server:
-    enabled: true
+    serviceMonitor:
+      main:
+        labels:
+          release: kube-prometheus-stack
     controllers:
       main:
         containers:
           main:
-            image:
-              repository: ghcr.io/immich-app/immich-server
-              pullPolicy: IfNotPresent
+            env:
+              DB_HOSTNAME:
+                valueFrom:
+                  configMapKeyRef:
+                    name: immich-database-config
+                    key: DB_HOSTNAME
+              DB_PORT:
+                valueFrom:
+                  configMapKeyRef:
+                    name: immich-database-config
+                    key: DB_PORT
+              DB_DATABASE_NAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-database
+                    key: DB_DATABASE_NAME
+              DB_USERNAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-database
+                    key: DB_USERNAME
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-database
+                    key: DB_PASSWORD
+              DB_VECTOR_EXTENSION: vectorchord
+              DB_STORAGE_TYPE: SSD
     ingress:
       main:
         enabled: true
-        className: nginx
         annotations:
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
         hosts:
           - host: photos.huukiet.com
             paths:
               - path: /
-                pathType: Prefix
                 service:
                   identifier: main
         tls: []
 
   machine-learning:
-    enabled: true
-    controllers:
-      main:
-        containers:
-          main:
-            image:
-              repository: ghcr.io/immich-app/immich-machine-learning
-              pullPolicy: IfNotPresent
-            env:
-              TRANSFORMERS_CACHE: /cache
-              HF_XET_CACHE: /cache/huggingface-xet
-              MPLCONFIGDIR: /cache/matplotlib-config
     persistence:
       cache:
         enabled: true
         type: persistentVolumeClaim
-        size: 10Gi
         accessMode: ReadWriteOnce
+        size: 10Gi

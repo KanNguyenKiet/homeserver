@@ -1,9 +1,9 @@
 apiVersion: v2
-name: immich-platform
-description: Immich photo backup for the homeserver cluster
+name: immich-homeserver
+description: Immich deployment for the homeserver cluster
 type: application
 version: 0.1.0
-appVersion: "v3.0.0"
+appVersion: "v3.1.0"
 dependencies:
   - name: immich
     version: "0.13.1"

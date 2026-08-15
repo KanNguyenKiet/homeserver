@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/part-of: {{ include "immich-homeserver.name" . }}
+    app.kubernetes.io/name: {{ include "woodpecker-homeserver.name" . }}
+    app.kubernetes.io/part-of: woodpecker
   annotations:
-    helm.sh/resource-policy: keep
     argocd.argoproj.io/sync-options: Delete=false,Prune=false

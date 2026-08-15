@@ -1,0 +1,10 @@
+apiVersion: v2
+name: woodpecker-homeserver
+description: Woodpecker CI for the homeserver cluster
+type: application
+version: 0.1.0
+appVersion: "3.17.0"
+dependencies:
+  - name: woodpecker
+    version: "3.7.0"
+    repository: oci://ghcr.io/woodpecker-ci/helm

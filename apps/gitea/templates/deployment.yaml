@@ -61,6 +61,8 @@ spec:
               value: {{ .Values.gitea.actions.enabled | quote }}
             - name: GITEA__packages__ENABLED
               value: {{ .Values.gitea.packages.enabled | quote }}
+            - name: GITEA__webhook__ALLOWED_HOST_LIST
+              value: {{ .Values.gitea.webhook.allowedHostList | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:

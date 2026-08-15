@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: woodpecker
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KanNguyenKiet/homeserver.git
+    targetRevision: master
+    path: apps/woodpecker
+    helm:
+      releaseName: woodpecker
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: woodpecker
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true

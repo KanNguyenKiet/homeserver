@@ -6,6 +6,7 @@
 | --- | --- |
 | `git.huukiet.com` | Gitea |
 | `photos.huukiet.com` | Immich |
+| `ci.huukiet.com` | Woodpecker CI |
 | `argocd.huukiet.com` | Argo CD (GitHub OAuth via Dex) |
 | `home.huukiet.com` | Homepage dashboard |
 | `wiki.huukiet.com` | This wiki |
@@ -19,11 +20,11 @@ reach the homeserver and cluster internals without exposing ports to the interne
 
 ## Host PostgreSQL
 
-Gitea connects to PostgreSQL running natively on the Ubuntu host. Immich uses the
-same instance with a separate database after **pgvector** and **VectorChord** are
+Gitea connects to PostgreSQL running natively on the Ubuntu host. Immich uses a
+second PostgreSQL cluster on port `5433`, with **pgvector** and **VectorChord**
 installed (see [Immich host PostgreSQL](immich-postgres.md)). PostgreSQL listens
-on localhost and the LAN IP; `pg_hba.conf` allows only the k3s Pod CIDR. This keeps
-database backups and upgrades outside the Kubernetes lifecycle.
+on localhost and the LAN IP; `pg_hba.conf` allows only the k3s Pod CIDR. This
+keeps database backups and upgrades outside the Kubernetes lifecycle.
 
 ## Immich public hostname (Cloudflare Zero Trust)
 

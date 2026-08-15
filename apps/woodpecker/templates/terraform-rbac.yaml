@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.terraform.serviceAccountName }}
+  labels:
+    {{- include "woodpecker-homeserver.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.terraform.serviceAccountName }}
+  labels:
+    {{- include "woodpecker-homeserver.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/token
+    resourceNames:
+      - {{ .Values.terraform.serviceAccountName }}
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.terraform.serviceAccountName }}
+  labels:
+    {{- include "woodpecker-homeserver.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.terraform.serviceAccountName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.terraform.serviceAccountName }}
+    namespace: {{ .Release.Namespace }}

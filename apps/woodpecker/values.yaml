@@ -1,0 +1,84 @@
+woodpecker:
+  server:
+    env:
+      WOODPECKER_HOST: https://ci.huukiet.com
+      WOODPECKER_GITEA: "true"
+      WOODPECKER_GITEA_URL: https://git.huukiet.com
+      WOODPECKER_ADMIN: huukiethk2804,kienguyen,KanNguyenKiet
+      WOODPECKER_OPEN: "false"
+      WOODPECKER_REPO_OWNERS: ops,huukiethk2804
+      WOODPECKER_DISABLE_USER_AGENT_REGISTRATION: "true"
+    extraSecretNamesForEnvFrom:
+      - woodpecker-env
+    createAgentSecret: false
+    persistentVolume:
+      enabled: true
+      size: 5Gi
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - host: ci.huukiet.com
+          paths:
+            - path: /
+      tls: []
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  agent:
+    replicaCount: 1
+    env:
+      WOODPECKER_SERVER: woodpecker-server:9000
+      WOODPECKER_BACKEND: kubernetes
+      WOODPECKER_BACKEND_K8S_NAMESPACE: woodpecker
+      WOODPECKER_BACKEND_K8S_NAMESPACE_PER_ORGANIZATION: "false"
+      WOODPECKER_BACKEND_K8S_STORAGE_RWX: "false"
+      WOODPECKER_BACKEND_K8S_VOLUME_SIZE: 2Gi
+      WOODPECKER_BACKEND_K8S_SERVICE_ACCOUNT_NAME_ALLOW_FROM_STEP: "true"
+      WOODPECKER_MAX_WORKFLOWS: "1"
+      WOODPECKER_CONNECT_RETRY_COUNT: "3"
+    extraSecretNamesForEnvFrom:
+      - woodpecker-env
+    mapAgentSecret: false
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretName: woodpecker-env
+  secretStore:
+    name: vault-backend
+    server: http://vault.vault.svc.cluster.local:8200
+    path: kv
+    version: v2
+  auth:
+    serviceAccountName: woodpecker-vault-auth
+    mountPath: kubernetes
+    role: woodpecker
+    audiences:
+      - vault
+  remoteRefs:
+    oauth:
+      key: homeserver/woodpecker
+      clientProperty: WOODPECKER_GITEA_CLIENT
+      secretProperty: WOODPECKER_GITEA_SECRET
+    agent:
+      key: homeserver/woodpecker-agent
+      secretProperty: WOODPECKER_AGENT_SECRET
+
+terraform:
+  serviceAccountName: woodpecker-terraform

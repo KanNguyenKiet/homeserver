@@ -33,9 +33,14 @@ every app depends on, the GitOps control plane, and user-facing applications.
                           v
                  +------------------+
                  | PostgreSQL 16    |
-                 | (native on host) |
+                 | Gitea + Immich   |
                  +------------------+
 ```
+
+Immich keeps its PostgreSQL cluster on the host SSD and mounts its retained photo
+library from the host ZFS dataset. This avoids putting latency-sensitive database
+files on HDD or network storage while keeping the large media library on redundant
+storage.
 
 ## Public request path
 

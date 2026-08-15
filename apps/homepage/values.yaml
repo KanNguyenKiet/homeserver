@@ -98,6 +98,10 @@ config:
             icon: gitea.svg
             href: https://git.huukiet.com
             description: Git forge
+        - Woodpecker:
+            icon: mdi-source-branch
+            href: https://ci.huukiet.com
+            description: Terraform CI
         - Argo CD:
             icon: argo-cd.svg
             href: https://argocd.huukiet.com
@@ -114,6 +118,10 @@ config:
             icon: grafana.svg
             href: https://grafana.huukiet.com
             description: Cluster and system monitoring
+        - Immich:
+            icon: immich.svg
+            href: https://photos.huukiet.com
+            description: Private photo and video library
     - Managed Services:
         - Cloudflare:
             icon: si-cloudflare

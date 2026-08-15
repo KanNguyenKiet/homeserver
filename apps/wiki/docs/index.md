@@ -12,9 +12,9 @@ explains why I built it this way and how the pieces fit together.
 
 | Layer | What runs there |
 | --- | --- |
-| Host | Ubuntu, k3s, PostgreSQL 16 |
+| Host | Ubuntu, k3s, PostgreSQL 16, ZFS photo storage |
 | Platform | Argo CD, Vault, External Secrets, ingress-nginx, cloudflared, Tailscale |
-| Apps | Gitea, Homepage, Wiki |
+| Apps | Gitea, Immich, Homepage, Wiki |
 
 Content is versioned in Git under `apps/wiki/docs/`. After you push to `master`, Gitea
 Actions builds the container image, tags it with the commit SHA, updates
