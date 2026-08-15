@@ -9,7 +9,7 @@
 #   3. Creates the cluster-secrets Kubernetes auth role.
 #   4. Force-syncs the ExternalSecrets managed by ClusterExternalSecret.
 #
-# Usage (on the homeserver, after deploy.sh syncs cluster-secrets):
+# Usage (on the homeserver, after Argo CD syncs cluster-secrets):
 #   export VAULT_ROOT_TOKEN="$(jq -r .root_token /var/lib/vault-bootstrap/vault-init.json)"
 #   bash scripts/migrate-cluster-secrets.sh
 #   bash scripts/migrate-cluster-secrets.sh -dry-run

@@ -480,7 +480,7 @@ type vaultStatus struct {
 
 func requireVaultReady(vaultNamespace, vaultPod, waitTimeout string) {
 	if err := runKubectl("get", "pod", vaultPod, "-n", vaultNamespace); err != nil {
-		fail("Vault is not deployed; run deploy.sh first")
+		fail("Vault is not deployed; sync the Vault Application in Argo CD first")
 	}
 	must(runKubectl("wait", "pod/"+vaultPod, "-n", vaultNamespace,
 		"--for=jsonpath={.status.phase}=Running", "--timeout="+waitTimeout))

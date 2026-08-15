@@ -21,29 +21,26 @@ kubectl wait --for=condition=Available deployment/argocd-server \
 kubectl apply -f root-application.yaml
 ```
 
-**Deploy on the homeserver** (requires `git`, `helm`, `kubectl`; Vault ops also need `jq`):
+**Normal GitOps deploy**:
 
 ```bash
-git pull --ff-only origin master
-bash deploy.sh
+git push origin master
 ```
 
-The script deploys the checked-out `master` commit, validates Helm charts, applies the
-root Application, and waits for child Applications to sync. Pull before running; it
-refuses dirty working trees.
-
-Optional timeout override:
+After the first bootstrap, Argo CD watches `master` and syncs the root Application
+and child Applications from Git. To force a refresh from the cluster:
 
 ```bash
-DEPLOY_TIMEOUT_SECONDS=900 bash deploy.sh
+kubectl annotate application homeserver -n argocd \
+  argocd.argoproj.io/refresh=hard --overwrite
 ```
 
 ## Layout
 
 ```text
 homeserver/
-|-- apps/           # Workloads (Gitea, Woodpecker, wiki, homepage, …)
-|-- platforms/      # Cluster services (Argo CD config, Vault, ingress, monitoring, …)
+|-- apps/           # Workloads (Gitea, Woodpecker, wiki, homepage, ...)
+|-- platforms/      # Cluster services (Argo CD config, Vault, ingress, monitoring, ...)
 |-- scripts/        # Vault bootstrap, unseal, vaultsecret CLI
 |-- kustomization.yaml
 `-- root-application.yaml
@@ -82,9 +79,10 @@ scripts/vaultsecret/vaultsecret \
   -set-prompt WOODPECKER_GITEA_SECRET
 ```
 
-Deploy this repo with `bash deploy.sh`, log in at `https://ci.huukiet.com`, and
-activate `ops/homeserver_infra`. If Gitea webhook delivery is blocked, keep
-`ALLOWED_HOST_LIST=external,loopback` in the Gitea webhook config.
+Push this repo to `master`, wait for Argo CD to sync Woodpecker, then log in at
+`https://ci.huukiet.com` and activate `ops/homeserver_infra`. If Gitea webhook
+delivery is blocked, keep `ALLOWED_HOST_LIST=external,loopback` in the Gitea
+webhook config.
 
 ## Related
 

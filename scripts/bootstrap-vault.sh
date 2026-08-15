@@ -92,7 +92,7 @@ done
 
 log "Waiting for the Vault pod"
 kubectl get pod "$VAULT_POD" -n "$VAULT_NAMESPACE" >/dev/null \
-  || fail "Vault is not deployed; run deploy.sh first"
+  || fail "Vault is not deployed; sync the Vault Application in Argo CD first"
 kubectl wait pod/"$VAULT_POD" -n "$VAULT_NAMESPACE" \
   --for=jsonpath='{.status.phase}'=Running --timeout="$WAIT_TIMEOUT"
 

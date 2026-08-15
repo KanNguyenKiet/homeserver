@@ -7,7 +7,7 @@ explains why I built it this way and how the pieces fit together.
     **https://wiki.huukiet.com** is the main documentation for this homelab.
 
     The [repository README](https://github.com/KanNguyenKiet/homeserver/blob/master/README.md)
-    only covers bootstrap and `deploy.sh`.
+    only covers bootstrap and repository entry points.
 ## At a glance
 
 | Layer | What runs there |
