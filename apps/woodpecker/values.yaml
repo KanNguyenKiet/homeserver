@@ -46,7 +46,9 @@ woodpecker:
       - woodpecker-env
     mapAgentSecret: false
     persistence:
-      enabled: true
+      # Disabled: upstream chart renders namespace:null in volumeClaimTemplates,
+      # and ArgoCD ServerSideApply can corrupt spec.status on the PVC template.
+      enabled: false
       size: 1Gi
     resources:
       requests:
