@@ -1,7 +1,7 @@
 woodpecker:
   server:
     env:
-      WOODPECKER_HOST: https://ci.huukiet.com
+      WOODPECKER_HOST: https://woodpecker.huukiet.com
       WOODPECKER_GITEA: "true"
       WOODPECKER_GITEA_URL: https://git.huukiet.com
       WOODPECKER_ADMIN: huukiethk2804,kienguyen,KanNguyenKiet
@@ -14,14 +14,6 @@ woodpecker:
     persistentVolume:
       enabled: true
       size: 5Gi
-    ingress:
-      enabled: true
-      ingressClassName: nginx
-      hosts:
-        - host: ci.huukiet.com
-          paths:
-            - path: /
-      tls: []
     resources:
       requests:
         cpu: 100m
