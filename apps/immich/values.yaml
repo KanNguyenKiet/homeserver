@@ -27,13 +27,14 @@ externalSecret:
     key: homeserver/immich
 
 library:
-  # Keep managing the bound claim in Git with the same immutable fields (storageClass,
-  # volumeName, accessModes). Do not switch to staticHostPath until after migration.
+  # Managed in Git so Argo prune does not drop the claim. After the first bind, keep
+  # storageClass and accessModes stable; only size requests may change on some clusters.
   create: true
   claimName: immich-library
   storageClass: local-path
   size: 200Gi
-  volumeName: pvc-5fbd9916-ee75-42d8-8276-fdf358f224bc
+  # Set only when reclaiming an existing PV by name (immutable once bound).
+  # volumeName: pvc-xxxxxxxx
   accessModes:
     - ReadWriteOnce
   staticHostPath:

@@ -20,8 +20,8 @@ spec:
   hostPath:
     path: {{ .Values.library.staticHostPath.hostPath | quote }}
     type: Directory
-{{- end }}
 ---
+{{- end }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -39,7 +39,7 @@ spec:
   volumeMode: Filesystem
   {{- if .Values.library.staticHostPath.enabled }}
   volumeName: {{ .Values.library.staticHostPath.persistentVolumeName }}
-  {{- else if .Values.library.volumeName }}
+  {{- else if and .Values.library.volumeName (ne .Values.library.volumeName "") }}
   volumeName: {{ .Values.library.volumeName | quote }}
   {{- end }}
   resources:
