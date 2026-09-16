@@ -1,8 +1,9 @@
 {{- if .Values.library.create }}
+{{- if .Values.library.staticHostPath.enabled }}
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ .Values.library.persistentVolumeName }}
+  name: {{ .Values.library.staticHostPath.persistentVolumeName }}
   labels:
     {{- include "immich-homeserver.labels" . | nindent 4 }}
   annotations:
@@ -10,15 +11,16 @@ metadata:
     argocd.argoproj.io/sync-options: Delete=false,Prune=false
 spec:
   capacity:
-    storage: {{ .Values.library.size }}
+    storage: {{ .Values.library.staticHostPath.size }}
   accessModes:
     {{- toYaml .Values.library.accessModes | nindent 4 }}
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: {{ .Values.library.storageClass | quote }}
+  storageClassName: {{ .Values.library.staticHostPath.storageClass | quote }}
   volumeMode: Filesystem
   hostPath:
-    path: {{ .Values.library.hostPath | quote }}
+    path: {{ .Values.library.staticHostPath.hostPath | quote }}
     type: Directory
+{{- end }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -35,7 +37,11 @@ spec:
     {{- toYaml .Values.library.accessModes | nindent 4 }}
   storageClassName: {{ .Values.library.storageClass | quote }}
   volumeMode: Filesystem
-  volumeName: {{ .Values.library.persistentVolumeName }}
+  {{- if .Values.library.staticHostPath.enabled }}
+  volumeName: {{ .Values.library.staticHostPath.persistentVolumeName }}
+  {{- else if .Values.library.volumeName }}
+  volumeName: {{ .Values.library.volumeName | quote }}
+  {{- end }}
   resources:
     requests:
       storage: {{ .Values.library.size }}

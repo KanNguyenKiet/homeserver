@@ -27,18 +27,21 @@ externalSecret:
     key: homeserver/immich
 
 library:
-  # The cluster already has immich-library on k3s local-path (200Gi). PVC spec fields
-  # such as storageClass and volumeName are immutable once bound; do not re-apply a
-  # static ZFS hostPath claim until after a deliberate migration.
-  # Set create: true only after /tank/immich/library exists and the old PVC is removed.
-  create: false
-  persistentVolumeName: immich-library
+  # Keep managing the bound claim in Git with the same immutable fields (storageClass,
+  # volumeName, accessModes). Do not switch to staticHostPath until after migration.
+  create: true
   claimName: immich-library
-  storageClass: immich-library-static
-  size: 1Ti
+  storageClass: local-path
+  size: 200Gi
+  volumeName: pvc-5fbd9916-ee75-42d8-8276-fdf358f224bc
   accessModes:
     - ReadWriteOnce
-  hostPath: /tank/immich/library
+  staticHostPath:
+    enabled: false
+    persistentVolumeName: immich-library
+    storageClass: immich-library-static
+    size: 1Ti
+    hostPath: /tank/immich/library
 
 immich:
   controllers:
