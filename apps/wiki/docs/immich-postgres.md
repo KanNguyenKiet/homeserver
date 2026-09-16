@@ -1,8 +1,10 @@
 # Immich host PostgreSQL setup
 
-Immich shares the native PostgreSQL 16 instance with Gitea (`192.168.100.10:5432`).
-The Immich database is separate; the instance must provide **pgvector** and
-**VectorChord** before the Immich app syncs.
+Immich runs on the **same Ubuntu host as Gitea** (`192.168.100.10`), but uses a
+**separate PostgreSQL 16 cluster** on port **5433** (Gitea stays on `5432`). That
+cluster must provide **pgvector** and **VectorChord** before the Immich app syncs.
+Use `scripts/bootstrap-immich-host.sh` on the control-plane node (skip the ZFS
+section if the library still uses in-cluster storage).
 
 Follow [Immich postgres-standalone](https://docs.immich.app/administration/postgres-standalone/)
 on the Ubuntu host. Expect a short Gitea outage when PostgreSQL restarts.
@@ -78,7 +80,10 @@ You should see `vector` and `vchord` (and dependencies).
 ## 4. Network access from pods
 
 Ensure `pg_hba.conf` still allows the k3s Pod CIDR (`10.42.0.0/16`), same as Gitea.
-PostgreSQL should listen on the LAN address used in app values (`192.168.100.10`).
+PostgreSQL listens on the LAN address in app values (`192.168.100.10:5433`). If
+Immich pods run on a **worker** node, pod traffic may be SNAT'd to the worker LAN
+IP; allow `192.168.100.0/24` to port `5433` in UFW and add a matching `pg_hba`
+rule (in addition to the k3s Pod CIDR).
 
 ## 5. Vault secret
 
