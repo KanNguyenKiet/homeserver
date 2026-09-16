@@ -27,10 +27,11 @@ externalSecret:
     key: homeserver/immich
 
 library:
-  # The ZFS dataset must already be mounted before this Application is synced.
-  # hostPath type Directory intentionally prevents writes to the OS disk if the
-  # pool is missing after a reboot.
-  create: true
+  # The cluster already has immich-library on k3s local-path (200Gi). PVC spec fields
+  # such as storageClass and volumeName are immutable once bound; do not re-apply a
+  # static ZFS hostPath claim until after a deliberate migration.
+  # Set create: true only after /tank/immich/library exists and the old PVC is removed.
+  create: false
   persistentVolumeName: immich-library
   claimName: immich-library
   storageClass: immich-library-static

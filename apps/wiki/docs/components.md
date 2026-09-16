@@ -15,4 +15,4 @@
 | **Homepage** | Service dashboard at `home.huukiet.com` | `homepage` |
 | **Wiki** | This documentation site (MkDocs Material) | `wiki` |
 | **PostgreSQL 16** | Separate native clusters for Gitea and Immich | - |
-| **ZFS** | Retained Immich photo library at `/tank/immich` | - |
+| **ZFS** | Optional future home for Immich library at `/tank/immich` (currently `local-path`) | - |
