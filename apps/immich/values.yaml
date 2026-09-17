@@ -27,22 +27,19 @@ externalSecret:
     key: homeserver/immich
 
 library:
-  # Managed in Git so Argo prune does not drop the claim. After the first bind, keep
-  # storageClass and accessModes stable; only size requests may change on some clusters.
   create: true
   claimName: immich-library
-  storageClass: local-path
-  size: 200Gi
-  # Set only when reclaiming an existing PV by name (immutable once bound).
-  # volumeName: pvc-xxxxxxxx
   accessModes:
     - ReadWriteOnce
+  storageClass: local-path
+  size: 350Gi
   staticHostPath:
-    enabled: false
+    enabled: true
+    nodeHostname: homeserver1
     persistentVolumeName: immich-library
     storageClass: immich-library-static
-    size: 1Ti
-    hostPath: /tank/immich/library
+    size: 350Gi
+    hostPath: /tank/immich
 
 immich:
   controllers:
@@ -79,6 +76,9 @@ immich:
           release: kube-prometheus-stack
     controllers:
       main:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: homeserver1
         containers:
           main:
             env:

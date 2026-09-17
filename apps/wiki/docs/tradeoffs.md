@@ -7,9 +7,9 @@
   on host availability outside k8s. Immich requires **VectorChord** on the same
   instance; PostgreSQL restarts and extension upgrades affect both apps.
 
-- **Immich library on local-path.** The 200Gi library PVC uses k3s `local-path`,
-  which does not support online expansion. Growing storage means migrating to a new
-  PVC or mount, not only editing `size` in Git.
+- **Immich library on ZFS (LVM-backed pool).** The library uses a static hostPath PV
+  on `homeserver1` at `/tank/immich` (~350Gi). Add capacity by growing the LV or
+  pool, not by resizing a `local-path` PVC.
 
 - **Public Git repo.** Argo CD pulls over HTTPS without credentials. Making the repo
   private requires adding a repository secret.

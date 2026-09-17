@@ -17,6 +17,16 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: {{ .Values.library.staticHostPath.storageClass | quote }}
   volumeMode: Filesystem
+  {{- with .Values.library.staticHostPath.nodeHostname }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ . | quote }}
+  {{- end }}
   hostPath:
     path: {{ .Values.library.staticHostPath.hostPath | quote }}
     type: Directory
@@ -35,13 +45,16 @@ metadata:
 spec:
   accessModes:
     {{- toYaml .Values.library.accessModes | nindent 4 }}
-  storageClassName: {{ .Values.library.storageClass | quote }}
-  volumeMode: Filesystem
   {{- if .Values.library.staticHostPath.enabled }}
+  storageClassName: {{ .Values.library.staticHostPath.storageClass | quote }}
   volumeName: {{ .Values.library.staticHostPath.persistentVolumeName }}
-  {{- else if and .Values.library.volumeName (ne .Values.library.volumeName "") }}
+  {{- else }}
+  storageClassName: {{ .Values.library.storageClass | quote }}
+  {{- if and .Values.library.volumeName (ne .Values.library.volumeName "") }}
   volumeName: {{ .Values.library.volumeName | quote }}
   {{- end }}
+  {{- end }}
+  volumeMode: Filesystem
   resources:
     requests:
       storage: {{ .Values.library.size }}
