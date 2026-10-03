@@ -59,6 +59,16 @@ immich:
       trash:
         enabled: true
         days: 30
+      machineLearning:
+        enabled: false
+        clip:
+          enabled: false
+        duplicateDetection:
+          enabled: false
+        facialRecognition:
+          enabled: false
+        ocr:
+          enabled: false
 
   valkey:
     enabled: true
@@ -123,6 +133,7 @@ immich:
         tls: []
 
   machine-learning:
+    enabled: false
     persistence:
       cache:
         enabled: true
