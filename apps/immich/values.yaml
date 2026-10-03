@@ -56,6 +56,14 @@ immich:
       library:
         existingClaim: immich-library
     configuration:
+      ffmpeg:
+        transcode: bitrate
+        targetResolution: "720"
+        targetVideoCodec: h264
+        targetAudioCodec: aac
+        maxBitrate: "8000k"
+        crf: 28
+        preset: fast
       trash:
         enabled: true
         days: 30
