@@ -1,108 +1,50 @@
-# Immich host PostgreSQL setup
+# In-cluster PostgreSQL
 
-Immich runs on the **same Ubuntu host as Gitea** (`192.168.100.10`), but uses a
-**separate PostgreSQL 16 cluster** on port **5433** (Gitea stays on `5432`). That
-cluster must provide **pgvector** and **VectorChord** before the Immich app syncs.
-Use `scripts/bootstrap-immich-host.sh` on the control-plane node (skip the ZFS
-section if the library still uses in-cluster storage).
+Gitea and Immich each own a PostgreSQL 16 StatefulSet in the app namespace:
 
-Follow [Immich postgres-standalone](https://docs.immich.app/administration/postgres-standalone/)
-on the Ubuntu host. Expect a short Gitea outage when PostgreSQL restarts.
+| App | Service | Node | Image | PVC |
+| --- | --- | --- | --- | --- |
+| Gitea | `gitea-postgresql:5432` | `homeserver` | `postgres:16.14` | `gitea-postgresql-data` |
+| Immich | `immich-postgresql:5432` | `homeserver1` | `ghcr.io/immich-app/postgres:16-vectorchord1.1.1-pgvector0.8.5` | `immich-postgresql-data` |
 
-## 1. Install pgvector
+Both PVCs use the node-local `local-path` StorageClass. The Helm resources carry
+retain/prune protection, but the databases are not replicated: loss of the bound
+node or disk still requires a restore from backup.
 
-Add the [PostgreSQL Apt repository](https://wiki.postgresql.org/wiki/Apt) if needed,
-then:
+## Credentials
 
-```bash
-sudo apt update
-sudo apt install postgresql-16-pgvector
-```
+The PostgreSQL containers and their apps read the same Kubernetes Secret. Gitea
+uses `gitea-secret`; Immich uses `immich-database`, which External Secrets
+materializes from Vault path `homeserver/immich`.
 
-Ensure pgvector is at least `0.7.0`. In psql:
+Do not set `DB_VECTOR_EXTENSION=pgvector`; Immich uses VectorChord. The Immich
+database container preloads `vchord.so` and includes compatible VectorChord and
+pgvector versions.
 
-```sql
-ALTER EXTENSION vector UPDATE;
-```
-
-## 2. Install VectorChord
-
-Install VectorChord for PostgreSQL 16 using
-[TensorChord instructions](https://docs.immich.app/administration/postgres-standalone/).
-
-Add to `postgresql.conf` (merge with existing libraries):
-
-```text
-shared_preload_libraries = 'vchord.so'
-```
-
-If other libraries are already listed, comma-separate them, for example:
-
-```text
-shared_preload_libraries = 'pg_stat_statements, vchord.so'
-```
-
-Restart PostgreSQL:
+## Verify
 
 ```bash
-sudo systemctl restart postgresql
+kubectl -n gitea get statefulset,pod,pvc,svc -l app.kubernetes.io/component=database
+kubectl -n immich get statefulset,pod,pvc,svc -l app.kubernetes.io/component=database
+
+kubectl -n gitea exec gitea-postgresql-0 -- \
+  psql -U gitea -d gitea -c 'select version();'
+kubectl -n immich exec immich-postgresql-0 -- \
+  psql -U immich -d immich -c '\dx'
 ```
 
-## 3. Create database and role
+## Backups and upgrades
 
-Replace the password with a strong value; store the same values in Vault
-(`homeserver/immich`) for External Secrets.
+Take a logical dump before changing a PostgreSQL major version or the Immich
+extension image:
 
 ```bash
-sudo -u postgres psql <<'EOF'
-CREATE USER immich WITH PASSWORD 'CHANGE_ME';
-CREATE DATABASE immich OWNER immich;
-GRANT ALL PRIVILEGES ON DATABASE immich TO immich;
-EOF
+kubectl -n gitea exec gitea-postgresql-0 -- \
+  pg_dump -U gitea -d gitea -Fc > gitea.dump
+kubectl -n immich exec immich-postgresql-0 -- \
+  pg_dump -U immich -d immich -Fc > immich.dump
 ```
 
-Connect to the Immich database and enable extensions:
-
-```bash
-sudo -u postgres psql -d immich <<'EOF'
-CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
-EOF
-```
-
-Verify:
-
-```bash
-sudo -u postgres psql -d immich -c '\dx'
-```
-
-You should see `vector` and `vchord` (and dependencies).
-
-## 4. Network access from pods
-
-Ensure `pg_hba.conf` still allows the k3s Pod CIDR (`10.42.0.0/16`), same as Gitea.
-PostgreSQL listens on the LAN address in app values (`192.168.100.10:5433`). If
-Immich pods run on a **worker** node, pod traffic may be SNAT'd to the worker LAN
-IP; allow `192.168.100.0/24` to port `5433` in UFW and add a matching `pg_hba`
-rule (in addition to the k3s Pod CIDR).
-
-## 5. Vault secret
-
-After the database exists, write credentials with `vaultsecret` (see
-[Secret management](secrets.md#writing-secrets-with-vaultsecret)):
-
-```bash
-scripts/vaultsecret/vaultsecret \
-  -path homeserver/immich -patch \
-  -set dbName=immich \
-  -set dbUser=immich \
-  -set-prompt dbPassword \
-  -wait-externalsecret immich-secret -app-namespace immich
-```
-
-Do not set `DB_VECTOR_EXTENSION=pgvector`; Immich should use VectorChord.
-
-## Upgrades
-
-When upgrading Immich, check release notes for compatible **VectorChord** and
-**pgvector** version ranges. Upgrading host extensions or restarting PostgreSQL
-affects **both** Gitea and Immich.
+When upgrading Immich, check its release notes for supported **VectorChord** and
+**pgvector** versions. Each database is isolated, so restarting or upgrading one
+does not interrupt the other app.

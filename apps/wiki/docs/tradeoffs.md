@@ -3,9 +3,9 @@
 - **Single node, no HA.** Vault runs one Raft member. A server reboot means manual
   unseal and brief downtime.
 
-- **Native PostgreSQL.** Simpler backups and upgrades, but Gitea and Immich depend
-  on host availability outside k8s. Immich requires **VectorChord** on the same
-  instance; PostgreSQL restarts and extension upgrades affect both apps.
+- **Per-app PostgreSQL.** Gitea and Immich each run a PostgreSQL 16 StatefulSet in
+  their own namespace and node. This isolates restarts and extensions, but the
+  `local-path` PVCs remain node-local and are not highly available.
 
 - **Immich library on ZFS (LVM-backed pool).** The library uses a static hostPath PV
   on `homeserver1` at `/tank/immich` (~350Gi). Add capacity by growing the LV or

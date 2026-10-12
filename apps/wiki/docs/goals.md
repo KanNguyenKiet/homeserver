@@ -15,7 +15,8 @@ Vault holds credentials. External Secrets materializes them in-cluster.
 
 ## Minimal host footprint
 
-k3s runs workloads. Only PostgreSQL stays on the host, by choice.
+k3s runs all application workloads, including per-app PostgreSQL instances. The
+host only provides the cluster runtime and node-local storage.
 
 ## Remote access without port forwarding
 

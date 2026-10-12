@@ -14,5 +14,5 @@
 | **Valkey** | Immich job queue and cache | `immich` |
 | **Homepage** | Service dashboard at `home.huukiet.com` | `homepage` |
 | **Wiki** | This documentation site (MkDocs Material) | `wiki` |
-| **PostgreSQL 16** | Separate native clusters for Gitea and Immich | - |
+| **PostgreSQL 16** | Per-app StatefulSets with retained node-local PVCs | `gitea`, `immich` |
 | **ZFS** | Immich library pool `tank` on worker `homeserver1` at `/tank/immich` | - |

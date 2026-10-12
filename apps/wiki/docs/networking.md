@@ -17,13 +17,12 @@ A Tailscale Connector named `homeserver` advertises the LAN (`192.168.100.0/24`)
 CIDR (`10.42.0.0/16`), and Service CIDR (`10.43.0.0/16`). Remote tailnet devices
 reach the homeserver and cluster internals without exposing ports to the internet.
 
-## Host PostgreSQL
+## In-cluster PostgreSQL
 
-Gitea connects to PostgreSQL running natively on the Ubuntu host. Immich uses a
-second PostgreSQL cluster on port `5433`, with **pgvector** and **VectorChord**
-installed (see [Immich host PostgreSQL](immich-postgres.md)). PostgreSQL listens
-on localhost and the LAN IP; `pg_hba.conf` allows only the k3s Pod CIDR. This
-keeps database backups and upgrades outside the Kubernetes lifecycle.
+Each app connects to a namespace-local ClusterIP Service: `gitea-postgresql:5432`
+or `immich-postgresql:5432`. Neither database is exposed on a host or public port.
+The StatefulSets and retained PVCs are managed by the app Helm charts; see
+[In-cluster PostgreSQL](immich-postgres.md).
 
 ## Immich public hostname (Cloudflare Zero Trust)
 

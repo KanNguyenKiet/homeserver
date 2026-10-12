@@ -16,7 +16,7 @@ every app depends on, the GitOps control plane, and user-facing applications.
        |                                   |
        v                                   v
  +---------------------------------------------------+
- |              k3s cluster (single node)             |
+ |               k3s cluster (two nodes)               |
  |                                                    |
  |  +----------+  +--------+  +-------------------+  |
  |  | ingress- |  | Argo CD|  | External Secrets  |  |
@@ -26,21 +26,15 @@ every app depends on, the GitOps control plane, and user-facing applications.
  |       v            v                v            |
  |  +---------+  +---------+    +-----------+      |
  |  | Gitea   |  | Homepage|    |   Vault   |      |
- |  | Wiki    |  | Immich  |    |  (Raft)   |      |
- |  +---------+  +---------+    +-----------+      |
- +------------------------|-------------------------+
-                          |
-                          v
-                 +------------------+
-                 | PostgreSQL 16    |
-                 | Gitea + Immich   |
-                 +------------------+
+ |  | + PG 16 |  | Immich  |    |  (Raft)   |      |
+ |  | Wiki    |  | + PG 16 |    +-----------+      |
+ |  +---------+  +---------+                       |
+ +--------------------------------------------------+
 ```
 
-Immich keeps its PostgreSQL cluster on the host SSD and mounts its retained photo
-library from the host ZFS dataset. This avoids putting latency-sensitive database
-files on HDD or network storage while keeping the large media library on redundant
-storage.
+Gitea and Immich each own a PostgreSQL 16 StatefulSet and retained `local-path`
+PVC on the same node as the app. Immich mounts its retained photo library from the
+host ZFS dataset at `/tank/immich`.
 
 ## Public request path
 
