@@ -1,0 +1,122 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-postgresql
+  labels:
+    {{- include "immich-homeserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgresql
+      port: {{ .Values.postgresql.service.port }}
+      targetPort: postgresql
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.postgresql.persistence.claimName }}
+  labels:
+    {{- include "immich-homeserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  annotations:
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+spec:
+  accessModes:
+    {{- toYaml .Values.postgresql.persistence.accessModes | nindent 4 }}
+  storageClassName: {{ .Values.postgresql.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.persistence.size }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: immich-postgresql
+  labels:
+    {{- include "immich-homeserver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: immich-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: database
+    spec:
+      terminationGracePeriodSeconds: 60
+      nodeSelector:
+        {{- toYaml .Values.postgresql.nodeSelector | nindent 8 }}
+      containers:
+        - name: postgresql
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          args:
+            - -c
+            - shared_preload_libraries=vchord.so
+          ports:
+            - name: postgresql
+              containerPort: {{ .Values.postgresql.service.port }}
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.secretKeys.name }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.secretKeys.user }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.secretKeys.password }}
+            - name: POSTGRES_INITDB_ARGS
+              value: --data-checksums
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: DB_STORAGE_TYPE
+              value: SSD
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - pg_isready --dbname="$POSTGRES_DB" --username="$POSTGRES_USER"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - pg_isready --dbname="$POSTGRES_DB" --username="$POSTGRES_USER"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.postgresql.persistence.claimName }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+{{- end }}

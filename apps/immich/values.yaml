@@ -1,6 +1,6 @@
 database:
-  # Dedicated native PostgreSQL cluster on the homeserver SSD. Keep this database
-  # separate from the Gitea cluster because Immich expects a superuser account.
+  # During migration this continues to point at the native host cluster. Change
+  # it to immich-postgresql:5432 only after the dump has been restored.
   host: 192.168.100.10
   port: 5433
   existingSecret: immich-database
@@ -8,6 +8,29 @@ database:
     name: DB_DATABASE_NAME
     user: DB_USERNAME
     password: DB_PASSWORD
+
+postgresql:
+  enabled: true
+  image:
+    repository: ghcr.io/immich-app/postgres
+    tag: 16-vectorchord1.1.1-pgvector0.8.5
+    pullPolicy: IfNotPresent
+  service:
+    port: 5432
+  persistence:
+    claimName: immich-postgresql-data
+    storageClass: local-path
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+  nodeSelector:
+    kubernetes.io/hostname: homeserver1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
 
 externalSecret:
   enabled: true
