@@ -1,8 +1,6 @@
 database:
-  # During migration this continues to point at the native host cluster. Change
-  # it to immich-postgresql:5432 only after the dump has been restored.
-  host: 192.168.100.10
-  port: 5433
+  host: immich-postgresql
+  port: 5432
   existingSecret: immich-database
   secretKeys:
     name: DB_DATABASE_NAME

@@ -46,9 +46,7 @@ gitea:
     allowedHostList: external,loopback
   database:
     type: postgres
-    # During migration this continues to point at the native host cluster.
-    # Change it to gitea-postgresql:5432 only after the dump has been restored.
-    host: 192.168.100.10:5432
+    host: gitea-postgresql:5432
     existingSecret: gitea-secret
     secretKeys:
       name: DB_NAME
